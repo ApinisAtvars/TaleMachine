@@ -205,3 +205,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+# Ignore the volume mapped data
+neo4j_test/neo4j_data/
+neo4j_test/postgres_data/
+neo4j_test/pgadmin_data/
