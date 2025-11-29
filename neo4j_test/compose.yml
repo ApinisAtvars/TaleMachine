@@ -21,9 +21,9 @@ services:
     environment:
       - POSTGRES_USER=AtvarsViola
       - POSTGRES_PASSWORD=AtvarsViola
-      - POSTRES_DB=TaleMachine
+      - POSTGRES_DB=TaleMachine
     volumes:
-    - ${PWD}/postgres_data/:/var/lib/postgresql/data/
+    - ${PWD}/postgres_data/:/var/lib/postgresql/
   
   pgadmin:
     image: dpage/pgadmin4

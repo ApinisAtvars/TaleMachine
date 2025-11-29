@@ -8,6 +8,3 @@
 7. In "General",  enter the name of the server (this can be anything you want)
 8. Open the "Connection" tab, and enter "postgres" for the "Host name/address". Then, enter "AtvarsViola" for both the username and password. Finally, check "Save Password?"
 9. Click "Save"
-10. You should see a new PostGres server (Elephant icon). Click on the dropdown icon, then right-click on Databases. Click on Create -> Database, enter the name "TaleMachine", and click "Save"
-
-
