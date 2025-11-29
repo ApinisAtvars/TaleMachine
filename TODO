@@ -1,0 +1,2 @@
+- Create a Postgres ini script that creates the database, tables, and defines how everything should be.
+    - Afterwards, change the cold_start.md file to reflect this
