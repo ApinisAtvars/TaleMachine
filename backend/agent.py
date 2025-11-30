@@ -9,7 +9,7 @@ from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 from langchain.agents import create_agent
 from langchain.messages import AIMessage
-from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
+from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langchain.tools import tool
@@ -30,7 +30,11 @@ load_dotenv("env/.viola.env")
 
 class TaleMachineAgent:
     _llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", google_api_key=os.getenv("GEMINI_API_KEY"))
-    _prompt = "You are an advanced storytelling AI named TaleMachine that helps users create engaging and interactive stories."
+    _prompt = PromptTemplate.from_template(
+        "You are an advanced storytelling AI named TaleMachine that helps users create engaging and interactive stories. Right now, you are working with the following story: {story_name}\n\n" \
+        "When responding to user queries, make sure to use the tools available to you to fetch relevant story details from the database or save new story content as needed. " \
+        "Always aim to enhance the user's storytelling experience by providing creative and contextually appropriate responses.")
+    
     _mcp_server_url = os.getenv("MCP_SERVER_URL")
     _checkpointer = MemorySaver()
 
@@ -112,7 +116,7 @@ class TaleMachineAgent:
         return "No image generated"
     
     @staticmethod
-    async def run(messages: list, thread_id: str):
+    async def run(messages: list, story_name: str, thread_id: str):
         """Run the agent with a specific thread ID for checkpoint management."""
         try:
             async with streamablehttp_client(TaleMachineAgent._mcp_server_url) as connection:
@@ -127,10 +131,9 @@ class TaleMachineAgent:
                     tools = await load_mcp_tools(session, tool_interceptors=[TaleMachineAgent.ask_approval_interceptor])
                     tools.append(TaleMachineAgent.generate_image)
 
-                    print(messages)
                     agent = TaleMachineAgent._initialize_agent(
                         tools=tools,
-                        prompt=TaleMachineAgent._prompt
+                        prompt=TaleMachineAgent._prompt.format(story_name=story_name)
                     )
 
                     # Create thread config with thread_id
@@ -140,12 +143,10 @@ class TaleMachineAgent:
                         }
                     }
 
-                    st_callback = StreamlitCallbackHandler(st.container())
                     stream = agent.astream(
                         input={"messages": messages},
                         config=config,
                         stream_mode=["messages", "values"],
-                        callbacks=[st_callback]
                     )
                     
                     async for chunk in stream:
@@ -178,7 +179,7 @@ class TaleMachineAgent:
             raise e
 
     @staticmethod
-    async def resume_after_interrupt(thread_id: str, approved: bool):
+    async def resume_after_interrupt(thread_id: str, approved: bool, story_name: str):
         """Resume agent execution after an interrupt with approval/rejection."""
         try:
             async with streamablehttp_client(TaleMachineAgent._mcp_server_url) as connection:
@@ -195,7 +196,7 @@ class TaleMachineAgent:
 
                     agent = TaleMachineAgent._initialize_agent(
                         tools=tools,
-                        prompt=TaleMachineAgent._prompt
+                        prompt=TaleMachineAgent._prompt.format(story_name=story_name)
                     )
 
                     config = {
@@ -210,14 +211,11 @@ class TaleMachineAgent:
                     else:
                         # Send a Command to cancel the current operation
                         command = Command(resume="Action cancelled by user")
-
-                    st_callback = StreamlitCallbackHandler(st.container())
                     
                     stream = agent.astream(
                         input=command,
                         config=config,
-                        stream_mode=["messages", "values"],
-                        callbacks=[st_callback]
+                        stream_mode=["messages", "values"]
                     )
                     
                     async for chunk in stream:
@@ -229,14 +227,6 @@ class TaleMachineAgent:
                                         message, metadata = values
                                         if message.content:
                                             yield message.content
-                                # elif stream_mode == "values":
-                                #     if "__interrupt__" in values:
-                                #         print(f"\nResuming with values: {values}")
-                                #         interrupt_info = values.get("__interrupt__", "")
-                                #         if interrupt_info:
-                                #             print(f"Interrupt info: {interrupt_info}", file=sys.stderr)
-                                #             interrupt_msg = interrupt_info[0].value if interrupt_info else "Approval required"
-                                #             yield f"__interrupt__:{interrupt_msg}"
                         except Exception as chunk_error:
                             print(f"Error processing chunk: {chunk_error}", file=sys.stderr)
                             import traceback
@@ -255,9 +245,9 @@ def main():
         {"role": "user", "content": "Find chapters in my story about a brave knight for user123 and session abc."}
     ]
     thread_id = "test_thread_123"
-    
+    session_name = "Knights and Dragons"
     async def run_agent():
-        async for response in TaleMachineAgent.run(messages, thread_id):
+        async for response in TaleMachineAgent.run(messages, session_name, thread_id):
             print(response)
     
     asyncio.run(run_agent())
