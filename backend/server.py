@@ -5,6 +5,7 @@ import datetime
 
 from models.postgres.Chapter import ChapterBase
 from services.postgres_service import PostgresService
+from models.postgres.ChapterNodeMapping import ChapterNodeMapping
 
 load_dotenv("env/.viola.env")
 
@@ -23,6 +24,7 @@ async def save_story(story_content: str, story_id: int) -> dict:
     """
     Save chapter content. 
     Only add the chapter text, without any metadata as the argument.
+    Only save the story when user asks to save.
     """
     timestamp = int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp())
     new_chapter = ChapterBase(content=story_content, story_id=story_id, timestamp=timestamp)
@@ -31,14 +33,29 @@ async def save_story(story_content: str, story_id: int) -> dict:
 
 # query database tool
 @mcp.tool()
-async def query_database(user_id: str, query: str) -> str:
+async def get_chapter_by_id(chapter_id: int) -> dict | None:
     """
-    Query the database for information related to the user's stories.
+    Get chapter by its ID.
     """
-    # Here you would implement the logic to query your database
-    # For demonstration, we'll just print and return a mock response
-    print(f"Querying database for user {user_id} with query: {query}")
-    return f"Mock response for query '{query}' for user {user_id}."
+    chapter = await pg_database_service.get_chapter_by_id(chapter_id)
+    if chapter:
+        return chapter.model_dump()
+    return None
+
+@mcp.tool()
+async def get_all_chapters_by_story_id(story_id: int) -> list[dict]:
+    """
+    Get all chapters for a given story ID.
+    """
+    chapters = await pg_database_service.get_all_chapters_by_story_id(story_id)
+    return [chapter.model_dump() for chapter in chapters]
+
+@mcp.tool()
+async def delete_chapter_by_id(chapter_id: int) -> bool:
+    """
+    Delete chapter by its ID.
+    """
+    return await pg_database_service.delete_chapter_by_id(chapter_id)
 #endregion
 
 if __name__ == "__main__":
