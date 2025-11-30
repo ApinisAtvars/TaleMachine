@@ -1,6 +1,7 @@
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 import os
+import datetime
 
 from models.postgres.Chapter import ChapterBase
 from services.postgres_service import PostgresService
@@ -18,15 +19,15 @@ print(f"Starting MCP server with transport: {transport}")
 pg_database_service = PostgresService()
 
 @mcp.tool()
-async def save_story(story_content: str) -> dict:
+async def save_story(story_content: str, story_id: int) -> dict:
     """
     Save chapter content. 
     Only add the chapter text, without any metadata as the argument.
     """
-    # new_chapter = ChapterBase(content="Chapter Content", story_id=story_id, timestamp=1234567890)
-    # created_chapter = await pg_database_service.insert_chapter(new_chapter)
-    # return new_chapter.model_dump()
-    pass
+    timestamp = int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp())
+    new_chapter = ChapterBase(content=story_content, story_id=story_id, timestamp=timestamp)
+    created_chapter = await pg_database_service.insert_chapter(new_chapter)
+    return created_chapter.model_dump()
 
 # query database tool
 @mcp.tool()

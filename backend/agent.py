@@ -7,7 +7,7 @@ from langgraph.checkpoint.memory import MemorySaver
 import streamlit as st
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
-from langchain.agents import create_agent
+from langchain.agents import create_agent, AgentState
 from langchain.messages import AIMessage
 from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -31,23 +31,15 @@ load_dotenv("env/.viola.env")
 class TaleMachineAgent:
     _llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", google_api_key=os.getenv("GEMINI_API_KEY"))
     _prompt = PromptTemplate.from_template(
-        "You are an advanced storytelling AI named TaleMachine that helps users create engaging and interactive stories. Right now, you are working with the following story: {story_name}\n\n" \
+        "You are an advanced storytelling AI named TaleMachine that helps users create engaging and interactive stories. \n" \
+        "Right now, you are working with the following story: {story_name}, with story ID: {story_id}. Use that story ID for all the tools that require it.\n\n" \
         "When responding to user queries, make sure to use the tools available to you to fetch relevant story details from the database or save new story content as needed. " \
         "Always aim to enhance the user's storytelling experience by providing creative and contextually appropriate responses.")
     
     _mcp_server_url = os.getenv("MCP_SERVER_URL")
     _checkpointer = MemorySaver()
 
-    @staticmethod
-    def _initialize_agent(tools: list, prompt: str):
-        agent = create_agent(
-            model=TaleMachineAgent._llm, 
-            tools=tools, 
-            system_prompt=prompt, 
-            checkpointer=TaleMachineAgent._checkpointer,
-        )
-        return agent
-    
+    # Tool interceptor to ask for user approval before saving a story
     async def ask_approval_interceptor(
         request: MCPToolCallRequest,
         handler,
@@ -72,6 +64,16 @@ class TaleMachineAgent:
             print(f"Tool {request.name} executed with result: {result.content}", file=sys.stderr)
 
         return result
+    
+    @staticmethod
+    def _initialize_agent(tools: list, prompt: str):
+        agent = create_agent(
+            model=TaleMachineAgent._llm, 
+            tools=tools, 
+            system_prompt=prompt, 
+            checkpointer=TaleMachineAgent._checkpointer,
+        )
+        return agent
     
     # Separate tool for image generation that returns a direct answer to the user
     @tool(return_direct=True)
@@ -116,7 +118,7 @@ class TaleMachineAgent:
         return "No image generated"
     
     @staticmethod
-    async def run(messages: list, story_name: str, thread_id: str):
+    async def run(messages: list, story_name: str, thread_id: str, story_id: int):
         """Run the agent with a specific thread ID for checkpoint management."""
         try:
             async with streamablehttp_client(TaleMachineAgent._mcp_server_url) as connection:
@@ -133,7 +135,7 @@ class TaleMachineAgent:
 
                     agent = TaleMachineAgent._initialize_agent(
                         tools=tools,
-                        prompt=TaleMachineAgent._prompt.format(story_name=story_name)
+                        prompt=TaleMachineAgent._prompt.format(story_name=story_name, story_id=story_id)
                     )
 
                     # Create thread config with thread_id
@@ -179,7 +181,7 @@ class TaleMachineAgent:
             raise e
 
     @staticmethod
-    async def resume_after_interrupt(thread_id: str, approved: bool, story_name: str):
+    async def resume_after_interrupt(thread_id: str, approved: bool, story_name: str, story_id: int):
         """Resume agent execution after an interrupt with approval/rejection."""
         try:
             async with streamablehttp_client(TaleMachineAgent._mcp_server_url) as connection:
@@ -196,7 +198,7 @@ class TaleMachineAgent:
 
                     agent = TaleMachineAgent._initialize_agent(
                         tools=tools,
-                        prompt=TaleMachineAgent._prompt.format(story_name=story_name)
+                        prompt=TaleMachineAgent._prompt.format(story_name=story_name, story_id=story_id)
                     )
 
                     config = {
@@ -242,13 +244,20 @@ class TaleMachineAgent:
 
 def main():
     messages = [
-        {"role": "user", "content": "Find chapters in my story about a brave knight for user123 and session abc."}
+        {"role": "user", "content": "Save the following story content: Once upon a time in a land far, far away..."}
     ]
     thread_id = "test_thread_123"
     session_name = "Knights and Dragons"
     async def run_agent():
-        async for response in TaleMachineAgent.run(messages, session_name, thread_id):
-            print(response)
+        async for response in TaleMachineAgent.run(messages, session_name, thread_id, story_id=14577):
+            print(response, end="", flush=True)
+        if response.startswith("__interrupt__:"):
+            interrupt_msg = response[len("__interrupt__:"):].strip()
+            print(f"\nInterrupt received: {interrupt_msg}")
+            # Simulate user approval
+            user_approval = True  # Change to False to simulate rejection
+            async for resume_response in TaleMachineAgent.resume_after_interrupt(thread_id, user_approval, session_name, story_id=14577):
+                print(resume_response, end="", flush=True)
     
     asyncio.run(run_agent())
 
