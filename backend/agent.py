@@ -46,7 +46,7 @@ class TaleMachineAgent:
     ) -> CallToolResult:
         if request.name == "save_story":
             # Raise interrupt to pause execution
-            value = interrupt("Story save requested. Do you want to proceed? Story: " + request.args.get("story_content", ""))
+            value = interrupt("Story save requested. Do you want to proceed?\n Story: " + request.args.get("story_content", ""))
             print(f"Interrupt value: {value}", file=sys.stderr)
             if value == "Action cancelled by user":
                 return CallToolResult(
@@ -59,10 +59,6 @@ class TaleMachineAgent:
 
         # Execute the tool
         result = await handler(request)
-
-        if result:
-            print(f"Tool {request.name} executed with result: {result.content}", file=sys.stderr)
-
         return result
     
     @staticmethod
@@ -222,6 +218,7 @@ class TaleMachineAgent:
                     
                     async for chunk in stream:
                         try:
+                            print(f"\nResume chunk: {chunk}", file=sys.stderr)
                             if isinstance(chunk, tuple):
                                 stream_mode, values = chunk
                                 if stream_mode == "messages":
@@ -242,7 +239,7 @@ class TaleMachineAgent:
             raise e
 
 
-def main():
+def test_interrupt():
     messages = [
         {"role": "user", "content": "Save the following story content: Once upon a time in a land far, far away..."}
     ]
@@ -261,5 +258,50 @@ def main():
     
     asyncio.run(run_agent())
 
+def test_in_terminal():
+    async def setup_story():
+        from services.postgres_service import PostgresService
+        from models.postgres.Story import Story
+        pg_database_service = PostgresService()
+
+        all_stories = await pg_database_service.get_all_stories()
+        if all_stories:
+            story = all_stories[0]
+            return story.id, "terminal_thread_001", story.title
+        else:
+            thread_id = "terminal_thread_001"
+            story_name = "The Adventures of Terminal"
+            story = Story(title=story_name, neo_database_name="terminal_adventures_db")
+            story = await pg_database_service.insert_story(story)
+            return story.id, thread_id, story_name
+    
+    story_id, thread_id, story_name = asyncio.run(setup_story())
+    async def run_terminal_agent():
+        print("Welcome to the TaleMachine Terminal Interface!")
+        print("Type 'exit' to quit.")
+
+        messages = []
+        while True:
+            user_input = input("\nYou: ")
+            if user_input.lower() == "exit":
+                print("Exiting TaleMachine. Goodbye!")
+                break
+            messages.append({"role": "user", "content": user_input})
+            full_response = ""
+            async for response in TaleMachineAgent.run(messages, story_name, thread_id, story_id):
+                full_response += response
+                print(response, end="", flush=True)
+            if response.startswith("__interrupt__:"):
+                interrupt_msg = response[len("__interrupt__:"):].strip()
+                print(f"\nInterrupt received: {interrupt_msg}")
+                approval = input("Do you want to approve this action? (yes/no): ").strip().lower()
+                user_approval = approval == "yes"
+                async for resume_response in TaleMachineAgent.resume_after_interrupt(thread_id, user_approval, story_name, story_id):
+                    print(resume_response, end="", flush=True)
+                    full_response += resume_response
+            messages.append({"role": "assistant", "content": full_response})
+    
+    asyncio.run(run_terminal_agent())
+
 if __name__ == "__main__":
-    main()
+    test_in_terminal()

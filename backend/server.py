@@ -24,6 +24,7 @@ async def save_story(story_content: str, story_id: int) -> dict:
     """
     Save chapter content. 
     Only add the chapter text, without any metadata as the argument.
+    Only save the story when user asks to save.
     """
     timestamp = int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp())
     new_chapter = ChapterBase(content=story_content, story_id=story_id, timestamp=timestamp)
@@ -55,40 +56,6 @@ async def delete_chapter_by_id(chapter_id: int) -> bool:
     Delete chapter by its ID.
     """
     return await pg_database_service.delete_chapter_by_id(chapter_id)
-#endregion
-
-#region Chapter-Node Mapping Tools
-@mcp.tool()
-async def insert_chapter_node_mapping(node_label:str, node_name:str, chapter_id:int) -> dict:
-    """
-    Insert a new chapter-node mapping.
-    """
-    mapping_model = ChapterNodeMapping(
-        node_label=node_label,
-        node_name=node_name,
-        chapter_id=chapter_id
-    )
-    created_mapping = await pg_database_service.insert_chapter_node_mapping(mapping_model)
-    return created_mapping.model_dump()
-
-@mcp.tool()
-async def get_mappings_by_chapter_id(chapter_id: int) -> list[dict]:
-    """
-    Get chapter-node mappings by chapter ID.
-    """
-    mappings = await pg_database_service.get_mappings_by_chapter_id(chapter_id)
-    return [mapping.model_dump() for mapping in mappings]
-
-@mcp.tool()
-async def get_mapping_by_node_label_and_name(node_label: str, node_name: str) -> dict | None:
-    """
-    Get chapter-node mapping by node label and name.
-    """
-    mapping = await pg_database_service.get_mapping_by_node_label_and_name(node_label, node_name)
-    if mapping:
-        return mapping.model_dump()
-    return None
-
 #endregion
 
 if __name__ == "__main__":
