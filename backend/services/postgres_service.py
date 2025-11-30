@@ -95,7 +95,7 @@ if __name__ == "__main__":
         # 1. Story Tests
         print("\n[Story Tests]")
         # Insert
-        new_story = Story(title="Test Story")
+        new_story = Story(title="Test Story", neo_database_name="test_story_db")
         created_story = await service.insert_story(new_story)
         print(f"Inserted Story: {created_story}")
         assert created_story.id is not None

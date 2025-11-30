@@ -57,3 +57,4 @@ class StoryRepository:
         except Exception as e:
             db.rollback()
             raise Exception(f"[ERROR] Error updating story title: {e}")
+    
