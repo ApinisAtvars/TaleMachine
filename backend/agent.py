@@ -2,12 +2,13 @@ import asyncio
 import base64
 import os
 import sys
-from typing import AsyncGenerator
+from langgraph.types import interrupt, Command
+from langgraph.checkpoint.memory import MemorySaver
 import streamlit as st
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 from langchain.agents import create_agent
-from langchain.messages import HumanMessage
+from langchain.messages import AIMessage
 from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_mcp_adapters.tools import load_mcp_tools
@@ -15,6 +16,14 @@ from langchain.tools import tool
 from google.oauth2 import service_account
 from google import genai
 from google.genai import types
+from mcp.types import (
+    CallToolResult,
+    TextContent,
+)
+
+from langchain_mcp_adapters.interceptors import (
+    MCPToolCallRequest,
+)
 
 from dotenv import load_dotenv
 load_dotenv("env/.viola.env")
@@ -23,6 +32,7 @@ class TaleMachineAgent:
     _llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", google_api_key=os.getenv("GEMINI_API_KEY"))
     _prompt = "You are an advanced storytelling AI named TaleMachine that helps users create engaging and interactive stories."
     _mcp_server_url = os.getenv("MCP_SERVER_URL")
+    _checkpointer = MemorySaver()
 
     @staticmethod
     def _initialize_agent(tools: list, prompt: str):
@@ -30,14 +40,40 @@ class TaleMachineAgent:
             model=TaleMachineAgent._llm, 
             tools=tools, 
             system_prompt=prompt, 
-            interrupt_before=[])
+            checkpointer=TaleMachineAgent._checkpointer,
+        )
         return agent
     
-    # Separate tool for image generation that returns a direct answer to the user instead of the model (to avoid token limits)
+    async def ask_approval_interceptor(
+        request: MCPToolCallRequest,
+        handler,
+    ) -> CallToolResult:
+        if request.name == "save_story":
+            # Raise interrupt to pause execution
+            value = interrupt("Story save requested. Do you want to proceed? Story: " + request.args.get("story_content", ""))
+            print(f"Interrupt value: {value}", file=sys.stderr)
+            if value == "Action cancelled by user":
+                return CallToolResult(
+                    content=[TextContent(
+                        type="text",
+                        text="Story save action was cancelled by the user."
+                    )],
+                    isError=False,
+                )
+
+        # Execute the tool
+        result = await handler(request)
+
+        if result:
+            print(f"Tool {request.name} executed with result: {result.content}", file=sys.stderr)
+
+        return result
+    
+    # Separate tool for image generation that returns a direct answer to the user
     @tool(return_direct=True)
     async def generate_image(description: str) -> str:
         """
-        Generate an image based on the provided description.
+        Generate an image based on the provided description. Only the image is returned to the user.
         """
         credentials = None
         service_account_path = os.getenv("VERTEX_SERVICE_ACCOUNT_LOCATION")
@@ -67,7 +103,6 @@ class TaleMachineAgent:
         
         for part in response.parts:
             if part.inline_data is not None:
-                # Get the raw image bytes directly from inline_data
                 img_bytes = part.inline_data.data
                 img_str = base64.b64encode(img_bytes).decode()
                 if part.text is not None:
@@ -77,57 +112,155 @@ class TaleMachineAgent:
         return "No image generated"
     
     @staticmethod
-    async def run(messages: list):
+    async def run(messages: list, thread_id: str):
+        """Run the agent with a specific thread ID for checkpoint management."""
         try:
             async with streamablehttp_client(TaleMachineAgent._mcp_server_url) as connection:
                 if isinstance(connection, tuple) and len(connection) >= 2:
                     read_stream, write_stream = connection[0], connection[1]
-                else:  # Fallback for any object-style return
+                else:
                     read_stream = connection.read
                     write_stream = connection.write
 
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
-                    tools = await load_mcp_tools(session)
+                    tools = await load_mcp_tools(session, tool_interceptors=[TaleMachineAgent.ask_approval_interceptor])
                     tools.append(TaleMachineAgent.generate_image)
 
-                    TaleMachineAgentAgent = TaleMachineAgent._initialize_agent(
+                    print(messages)
+                    agent = TaleMachineAgent._initialize_agent(
                         tools=tools,
                         prompt=TaleMachineAgent._prompt
                     )
 
-                    stream = TaleMachineAgentAgent.astream(
+                    # Create thread config with thread_id
+                    config = {
+                        "configurable": {
+                            "thread_id": thread_id
+                        }
+                    }
+
+                    st_callback = StreamlitCallbackHandler(st.container())
+                    stream = agent.astream(
                         input={"messages": messages},
-                        stream_mode="messages",
-                        callbacks=[StreamlitCallbackHandler(st.container())]
+                        config=config,
+                        stream_mode=["messages", "values"],
+                        callbacks=[st_callback]
                     )
+                    
                     async for chunk in stream:
                         try:
                             if isinstance(chunk, tuple):
-                                message, _metadata = chunk
-                                if message.content:
-                                    yield message.content
-                            else:
-                                if chunk.content:
-                                    yield chunk.content
+                                stream_mode, values = chunk
+                                if stream_mode == "messages":
+                                    if isinstance(values, tuple):
+                                        message, metadata = values
+                                        if isinstance(message, AIMessage) and message.content:
+                                            yield message.content
+                                elif stream_mode == "values":
+                                    if "__interrupt__" in values:
+                                        print("\nDetected interrupt in agent stream", file=sys.stderr)
+                                        # Extract interrupt message
+                                        interrupt_info = values.get("__interrupt__", "")
+                                        if interrupt_info:
+                                            interrupt_msg = interrupt_info[0].value if interrupt_info else "Approval required"
+                                            yield f"__interrupt__:{interrupt_msg}"
                         except Exception as chunk_error:
                             print(f"Error processing chunk: {chunk_error}", file=sys.stderr)
                             import traceback
                             traceback.print_exc()
                             continue
 
-        except ExceptionGroup as eg:
-            print(f"ExceptionGroup in TaleMachineAgent run:", file=sys.stderr)
-            for i, exc in enumerate(eg.exceptions):
-                print(f"  Exception {i}: {type(exc).__name__}: {exc}", file=sys.stderr)
-                import traceback
-                traceback.print_exception(type(exc), exc, exc.__traceback__)
-            raise
         except Exception as e:
             print(f"Error in TaleMachineAgent run: {e}", file=sys.stderr)
             import traceback
             traceback.print_exc()
             raise e
 
+    @staticmethod
+    async def resume_after_interrupt(thread_id: str, approved: bool):
+        """Resume agent execution after an interrupt with approval/rejection."""
+        try:
+            async with streamablehttp_client(TaleMachineAgent._mcp_server_url) as connection:
+                if isinstance(connection, tuple) and len(connection) >= 2:
+                    read_stream, write_stream = connection[0], connection[1]
+                else:
+                    read_stream = connection.read
+                    write_stream = connection.write
+
+                async with ClientSession(read_stream, write_stream) as session:
+                    await session.initialize()
+                    tools = await load_mcp_tools(session, tool_interceptors=[TaleMachineAgent.ask_approval_interceptor])
+                    tools.append(TaleMachineAgent.generate_image)
+
+                    agent = TaleMachineAgent._initialize_agent(
+                        tools=tools,
+                        prompt=TaleMachineAgent._prompt
+                    )
+
+                    config = {
+                        "configurable": {
+                            "thread_id": thread_id
+                        }
+                    }
+
+                    if approved:
+                        # Resume with None to continue execution
+                        command = Command(resume=True)
+                    else:
+                        # Send a Command to cancel the current operation
+                        command = Command(resume="Action cancelled by user")
+
+                    st_callback = StreamlitCallbackHandler(st.container())
+                    
+                    stream = agent.astream(
+                        input=command,
+                        config=config,
+                        stream_mode=["messages", "values"],
+                        callbacks=[st_callback]
+                    )
+                    
+                    async for chunk in stream:
+                        try:
+                            if isinstance(chunk, tuple):
+                                stream_mode, values = chunk
+                                if stream_mode == "messages":
+                                    if isinstance(values, tuple):
+                                        message, metadata = values
+                                        if message.content:
+                                            yield message.content
+                                # elif stream_mode == "values":
+                                #     if "__interrupt__" in values:
+                                #         print(f"\nResuming with values: {values}")
+                                #         interrupt_info = values.get("__interrupt__", "")
+                                #         if interrupt_info:
+                                #             print(f"Interrupt info: {interrupt_info}", file=sys.stderr)
+                                #             interrupt_msg = interrupt_info[0].value if interrupt_info else "Approval required"
+                                #             yield f"__interrupt__:{interrupt_msg}"
+                        except Exception as chunk_error:
+                            print(f"Error processing chunk: {chunk_error}", file=sys.stderr)
+                            import traceback
+                            traceback.print_exc()
+                            continue
+
+        except Exception as e:
+            print(f"Error in resume_after_interrupt: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc()
+            raise e
+
+
+def main():
+    messages = [
+        {"role": "user", "content": "Find chapters in my story about a brave knight for user123 and session abc."}
+    ]
+    thread_id = "test_thread_123"
+    
+    async def run_agent():
+        async for response in TaleMachineAgent.run(messages, thread_id):
+            print(response)
+    
+    asyncio.run(run_agent())
+
 if __name__ == "__main__":
-    TaleMachineAgent._initialize_agent([], TaleMachineAgent._prompt)
+    main()

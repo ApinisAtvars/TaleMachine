@@ -15,15 +15,17 @@ database_connection = "successful_db_connection"  # Placeholder for actual DB co
 
 # save story tool
 @mcp.tool()
-async def save_story(user_id: str, session_id: str, story_content: str) -> str:
+async def save_story(user_id: str, session_id: str, story_content: str) -> dict:
     """
     Save the story content for a given user and session.
     """
     # Here you would implement the logic to save the story to your database
     # For demonstration, we'll just print and return a success message
-    print(f"Test database connection: {database_connection}")
     print(f"Saving story for user {user_id}, session {session_id}: {story_content}")
-    return f"Story saved successfully in database {database_connection}."
+    return {
+        "status": "success",
+        "message": f"Story saved for user {user_id}, session {session_id}."
+    }
 
 # query database tool
 @mcp.tool()
