@@ -7,7 +7,7 @@ from backend.postgres_database import SessionLocal, start_db
 from backend.repositories.postgres.StoryRepository import StoryRepository
 from backend.repositories.postgres.ChapterRepository import ChapterRepository
 from backend.repositories.postgres.ChapterNodeMappingRepository import ChapterNodeMappingRepository
-
+from backend.repositories.postgres.ImageRepository import ImageRepository
 
 from sqlalchemy.orm import Session
 
@@ -80,6 +80,18 @@ class PostgresService:
     
     #endregion
 
+    #region Image repository
+
+    async def insert_image(self, new_image):
+        assert isinstance(self.db_session, Session)
+        return await ImageRepository.insert(self.db_session, new_image)
+    
+    async def get_images_by_story_id(self, story_id: int):
+        assert isinstance(self.db_session, Session)
+        return await ImageRepository.get_by_story_id(self.db_session, story_id)
+    
+    #endregion
+
 if __name__ == "__main__":
     start_db()
     service = PostgresService()
@@ -88,6 +100,7 @@ if __name__ == "__main__":
     from backend.models.postgres.Story import Story
     from backend.models.postgres.Chapter import ChapterBase
     from backend.models.postgres.ChapterNodeMapping import ChapterNodeMappingBase
+    from backend.models.postgres.Image import ImageBase
 
     async def run_tests():
         print("--- Starting Tests ---")
@@ -149,6 +162,17 @@ if __name__ == "__main__":
         specific_mapping = await service.get_mapping_by_node_label_and_name("Person", "Alice")
         print(f"Mapping (Person, Alice): {specific_mapping}")
 
+        # 4. Image Tests
+        print("\n[Image Tests]")
+        new_image = ImageBase(image_path=r"C:\Users\Atvar\Desktop\SEM5\GenerativeAI\New folder\TaleMachine\images\OIP.t6I7VZpL7005vZqkYA-cOQHaIW.webp", story_id=story_id)
+        new_image = await service.insert_image(
+            new_image
+        )
+        print(f"Inserted Image: {new_image}")
+
+        images = await service.get_images_by_story_id(story_id)
+        print(f"Images for Story {story_id}: {images}")
+
         # 4. Cleanup (Delete Tests)
         print("\n[Cleanup / Delete Tests]")
         # Delete Chapter
@@ -166,6 +190,8 @@ if __name__ == "__main__":
         # Verify Story Deletion
         check_story = await service.get_story_by_id(story_id)
         print(f"Check Story {story_id} (should be None): {check_story}")
+
+        
 
         print("\n--- Tests Completed ---")
 
