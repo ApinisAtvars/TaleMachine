@@ -1,8 +1,11 @@
 from sqlalchemy.orm import Session
+import sys
+import os
 
-from postgres_tables.ChapterTable import ChapterTable
-from postgres_models.Chapter import Chapter
-from postgres_tables.StoryTable import StoryTable
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
+from backend.tables.postgres.ChapterTable import ChapterTable
+from backend.models.postgres.Chapter import Chapter
+from backend.tables.postgres.StoryTable import StoryTable
 
 class ChapterRepository:
     @staticmethod

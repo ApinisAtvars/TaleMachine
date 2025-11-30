@@ -1,7 +1,10 @@
 # Maps the NNode label and node name from the Neo4j graph to the Message SQLAlchemy model
+import os
+import sys
 from pydantic import BaseModel, ConfigDict, Field
 
-from postgres_models.Chapter import Chapter
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
+from backend.models.postgres.Chapter import Chapter
 
 class ChapterNodeMappingBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)

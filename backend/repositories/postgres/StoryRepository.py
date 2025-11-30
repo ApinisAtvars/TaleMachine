@@ -1,7 +1,10 @@
 from sqlalchemy.orm import Session
+import sys
+import os
 
-from postgres_tables.StoryTable import StoryTable
-from postgres_models.Story import Story
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
+from backend.tables.postgres.StoryTable import StoryTable
+from backend.models.postgres.Story import Story
 
 class StoryRepository:
     @staticmethod

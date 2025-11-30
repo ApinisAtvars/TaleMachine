@@ -208,6 +208,6 @@ __marimo__/
 
 
 # Ignore the volume mapped data
-neo4j_test/neo4j_data/
-neo4j_test/postgres_data/
-neo4j_test/pgadmin_data/
+**/neo4j_data/
+**/postgres_data/
+**/pgadmin_data/

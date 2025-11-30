@@ -1,7 +1,10 @@
 from sqlalchemy.orm import Session
+import sys
+import os
 
-from postgres_models.ChapterNodeMapping import ChapterNodeMapping
-from postgres_tables.ChapterNodeMappingTable import ChapterNodeMappingTable
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
+from backend.models.postgres.ChapterNodeMapping import ChapterNodeMapping
+from backend.tables.postgres.ChapterNodeMappingTable import ChapterNodeMappingTable
 
 
 class ChapterNodeMappingRepository:

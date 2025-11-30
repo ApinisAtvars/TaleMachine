@@ -1,6 +1,9 @@
 from pydantic import BaseModel, ConfigDict, Field
+import sys
+import os
 
-from postgres_models.Story import Story
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
+from backend.models.postgres.Story import Story
 
 class ChapterBase(BaseModel):
     id: int | None = None

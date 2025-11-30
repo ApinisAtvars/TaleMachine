@@ -1,6 +1,9 @@
+import os
+import sys
 from sqlalchemy import Column, Integer, String, Text, ForeignKey
 
-from postgres_database import Base
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from backend.postgres_database import Base
 
 class StoryTable(Base): # Stories table stores story titles because they can maybe be renamed (sessions)
     __tablename__ = 'stories'

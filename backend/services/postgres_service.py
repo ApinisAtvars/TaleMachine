@@ -1,13 +1,12 @@
 import sys
 import os
 
-# Add the parent directory to sys.path to allow imports from the root of the module
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from postgres_database import SessionLocal, start_db
-from postgres_repositories.StoryRepository import StoryRepository
-from postgres_repositories.ChapterRepository import ChapterRepository
-from postgres_repositories.ChapterNodeMappingRepository import ChapterNodeMappingRepository
+from backend.postgres_database import SessionLocal, start_db
+from backend.repositories.postgres.StoryRepository import StoryRepository
+from backend.repositories.postgres.ChapterRepository import ChapterRepository
+from backend.repositories.postgres.ChapterNodeMappingRepository import ChapterNodeMappingRepository
 
 
 from sqlalchemy.orm import Session
@@ -86,9 +85,9 @@ if __name__ == "__main__":
     service = PostgresService()
 
     import asyncio
-    from postgres_models.Story import Story
-    from postgres_models.Chapter import ChapterBase
-    from postgres_models.ChapterNodeMapping import ChapterNodeMappingBase
+    from backend.models.postgres.Story import Story
+    from backend.models.postgres.Chapter import ChapterBase
+    from backend.models.postgres.ChapterNodeMapping import ChapterNodeMappingBase
 
     async def run_tests():
         print("--- Starting Tests ---")
