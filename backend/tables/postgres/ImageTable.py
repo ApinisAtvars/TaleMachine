@@ -1,0 +1,14 @@
+import os
+import sys
+from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy.orm import relationship
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from backend.postgres_database import Base
+
+class ImageTable(Base): # Stores the image path + the story that this image is from
+    __tablename__ = 'images'
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True) # One to many relationship with Story
+    image_path = Column(String)  # Path to the image file
+    story_id = Column(Integer, ForeignKey('stories.id', ondelete="CASCADE"))  # Foreign key to stories table
+    story = relationship("StoryTable")
