@@ -2,6 +2,9 @@ from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 import os
 
+from models.postgres.Chapter import ChapterBase
+from services.postgres_service import PostgresService
+
 load_dotenv("env/.viola.env")
 
 mcp = FastMCP(
@@ -11,21 +14,19 @@ mcp = FastMCP(
 transport = os.getenv("TRANSPORT", "streamable-http")
 print(f"Starting MCP server with transport: {transport}")
 
-database_connection = "successful_db_connection"  # Placeholder for actual DB connection
+#region Postgres Database Tools
+pg_database_service = PostgresService()
 
-# save story tool
 @mcp.tool()
-async def save_story(user_id: str, session_id: str, story_content: str) -> dict:
+async def save_story(story_content: str) -> dict:
     """
-    Save the story content for a given user and session.
+    Save chapter content. 
+    Only add the chapter text, without any metadata as the argument.
     """
-    # Here you would implement the logic to save the story to your database
-    # For demonstration, we'll just print and return a success message
-    print(f"Saving story for user {user_id}, session {session_id}: {story_content}")
-    return {
-        "status": "success",
-        "message": f"Story saved for user {user_id}, session {session_id}."
-    }
+    # new_chapter = ChapterBase(content="Chapter Content", story_id=story_id, timestamp=1234567890)
+    # created_chapter = await pg_database_service.insert_chapter(new_chapter)
+    # return new_chapter.model_dump()
+    pass
 
 # query database tool
 @mcp.tool()
@@ -37,7 +38,7 @@ async def query_database(user_id: str, query: str) -> str:
     # For demonstration, we'll just print and return a mock response
     print(f"Querying database for user {user_id} with query: {query}")
     return f"Mock response for query '{query}' for user {user_id}."
-
+#endregion
 
 if __name__ == "__main__":
     print(f"Starting MCP server with transport: {transport}")
