@@ -1,9 +1,9 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from neo4j_test.postgres_models.Story import Story
+from postgres_models.Story import Story
 
 class ChapterBase(BaseModel):
-    id: int
+    id: int | None = None
     content: str
     story_id: int
     timestamp: int

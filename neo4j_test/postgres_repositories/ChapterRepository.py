@@ -33,6 +33,11 @@ class ChapterRepository:
         return [Chapter.model_validate(obj) for obj in db_objects]
     
     @staticmethod
+    async def get_all_by_story_id(db: Session, story_id: int) -> list[Chapter]:
+        db_objects = db.query(ChapterTable).filter(ChapterTable.story_id == story_id).all()
+        return [Chapter.model_validate(obj) for obj in db_objects]
+    
+    @staticmethod
     async def delete_by_id(db: Session, chapter_id: int) -> bool:
         try:
             db_object = db.query(ChapterTable).filter(ChapterTable.id == chapter_id).first()

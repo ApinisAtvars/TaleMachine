@@ -46,11 +46,11 @@ class StoryRepository:
         try:
             db_object = db.query(StoryTable).filter(StoryTable.id == story_id).first()
             if db_object:
-                db_object.title = new_title # TODO: Check if this is a real error or not
+                db_object.title = new_title # type: ignore
+                
                 db.commit()
                 db.refresh(db_object)
                 return Story.model_validate(db_object)
-            return None
         except Exception as e:
             db.rollback()
             raise Exception(f"[ERROR] Error updating story title: {e}")
