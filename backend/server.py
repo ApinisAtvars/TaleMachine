@@ -5,6 +5,7 @@ import datetime
 
 from models.postgres.Chapter import ChapterBase
 from services.postgres_service import PostgresService
+from models.postgres.ChapterNodeMapping import ChapterNodeMapping
 
 load_dotenv("env/.viola.env")
 
@@ -58,12 +59,15 @@ async def delete_chapter_by_id(chapter_id: int) -> bool:
 
 #region Chapter-Node Mapping Tools
 @mcp.tool()
-async def insert_chapter_node_mapping(new_mapping: dict) -> dict:
+async def insert_chapter_node_mapping(node_label:str, node_name:str, chapter_id:int) -> dict:
     """
     Insert a new chapter-node mapping.
     """
-    from models.postgres.ChapterNodeMapping import ChapterNodeMapping
-    mapping_model = ChapterNodeMapping.model_validate(new_mapping)
+    mapping_model = ChapterNodeMapping(
+        node_label=node_label,
+        node_name=node_name,
+        chapter_id=chapter_id
+    )
     created_mapping = await pg_database_service.insert_chapter_node_mapping(mapping_model)
     return created_mapping.model_dump()
 
@@ -76,7 +80,7 @@ async def get_mappings_by_chapter_id(chapter_id: int) -> list[dict]:
     return [mapping.model_dump() for mapping in mappings]
 
 @mcp.tool()
-async def get_mapping_by_node_label_and_name(node_label: str, node_name: str)
+async def get_mapping_by_node_label_and_name(node_label: str, node_name: str) -> dict | None:
     """
     Get chapter-node mapping by node label and name.
     """
