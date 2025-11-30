@@ -12,10 +12,10 @@ services:
       - NEO4J_dbms_security_procedures_unrestricted=apoc.*
     volumes:
       - ./neo4j_data:/data
-  
+
   postgres:
     # Official Postgres image from DockerHub (we use the last version)
-    image: 'postgres:18.1'
+    image: "postgres:18.1"
     ports:
       - 5432:5432
     environment:
@@ -23,8 +23,8 @@ services:
       - POSTGRES_PASSWORD=AtvarsViola
       - POSTGRES_DB=TaleMachine
     volumes:
-    - ${PWD}/postgres_data/:/var/lib/postgresql/
-  
+      - ${PWD}/postgres_data/:/var/lib/postgresql/
+
   pgadmin:
     image: dpage/pgadmin4
     ports:
@@ -32,6 +32,7 @@ services:
     environment:
       - PGADMIN_DEFAULT_EMAIL=atvars.apinis@student.howest.be
       - PGADMIN_DEFAULT_PASSWORD=AtvarsViola
+    user: "$UID:$GID"
     depends_on:
       - postgres
     volumes:
