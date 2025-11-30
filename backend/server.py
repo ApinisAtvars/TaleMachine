@@ -31,14 +31,60 @@ async def save_story(story_content: str, story_id: int) -> dict:
 
 # query database tool
 @mcp.tool()
-async def query_database(user_id: str, query: str) -> str:
+async def get_chapter_by_id(chapter_id: int) -> dict | None:
     """
-    Query the database for information related to the user's stories.
+    Get chapter by its ID.
     """
-    # Here you would implement the logic to query your database
-    # For demonstration, we'll just print and return a mock response
-    print(f"Querying database for user {user_id} with query: {query}")
-    return f"Mock response for query '{query}' for user {user_id}."
+    chapter = await pg_database_service.get_chapter_by_id(chapter_id)
+    if chapter:
+        return chapter.model_dump()
+    return None
+
+@mcp.tool()
+async def get_all_chapters_by_story_id(story_id: int) -> list[dict]:
+    """
+    Get all chapters for a given story ID.
+    """
+    chapters = await pg_database_service.get_all_chapters_by_story_id(story_id)
+    return [chapter.model_dump() for chapter in chapters]
+
+@mcp.tool()
+async def delete_chapter_by_id(chapter_id: int) -> bool:
+    """
+    Delete chapter by its ID.
+    """
+    return await pg_database_service.delete_chapter_by_id(chapter_id)
+#endregion
+
+#region Chapter-Node Mapping Tools
+@mcp.tool()
+async def insert_chapter_node_mapping(new_mapping: dict) -> dict:
+    """
+    Insert a new chapter-node mapping.
+    """
+    from models.postgres.ChapterNodeMapping import ChapterNodeMapping
+    mapping_model = ChapterNodeMapping.model_validate(new_mapping)
+    created_mapping = await pg_database_service.insert_chapter_node_mapping(mapping_model)
+    return created_mapping.model_dump()
+
+@mcp.tool()
+async def get_mappings_by_chapter_id(chapter_id: int) -> list[dict]:
+    """
+    Get chapter-node mappings by chapter ID.
+    """
+    mappings = await pg_database_service.get_mappings_by_chapter_id(chapter_id)
+    return [mapping.model_dump() for mapping in mappings]
+
+@mcp.tool()
+async def get_mapping_by_node_label_and_name(node_label: str, node_name: str)
+    """
+    Get chapter-node mapping by node label and name.
+    """
+    mapping = await pg_database_service.get_mapping_by_node_label_and_name(node_label, node_name)
+    if mapping:
+        return mapping.model_dump()
+    return None
+
 #endregion
 
 if __name__ == "__main__":

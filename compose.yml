@@ -27,7 +27,7 @@ services:
       - POSTGRES_PASSWORD=AtvarsViola
       - POSTGRES_DB=TaleMachine
     volumes:
-      - ${PWD}/postgres_data/:/var/lib/postgresql/
+      - ./postgres_data/:/var/lib/postgresql/
 
   pgadmin:
     image: dpage/pgadmin4
@@ -40,4 +40,4 @@ services:
     depends_on:
       - postgres
     volumes:
-      - ${PWD}/pgadmin_data/:/var/lib/pgadmin/
+      - ./pgadmin_data/:/var/lib/pgadmin/
