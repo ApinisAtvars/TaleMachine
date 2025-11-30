@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 class PostgresService:
     def __init__(self):
+        start_db()
         self.db_session = SessionLocal()
     
     #region story repository
