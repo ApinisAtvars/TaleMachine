@@ -5,11 +5,9 @@ from dotenv import load_dotenv
 import os
 
 class Neo4jService:
-    def __init__(self, uri: str, user: str, password: str):
+    def __init__(self, db_graph: Neo4jGraph):
         load_dotenv()
-        self.db_uri = uri
-        self.db_user = user
-        self.db_password = password
+        self.db_graph = db_graph
         self.llm = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash",
             temperature=0,
@@ -19,15 +17,20 @@ class Neo4jService:
             google_api_key=os.getenv("GEMINI_API_KEY"),
         )
     
-    def connect(self, database_name) -> Neo4jGraph:
-        """
-        Connect to the Neo4j database with this given name.
-        If it doesn't exist, it will be created.
-        The database name should be the """
-        neo4j_graph = Neo4jGraph(
-            uri=self.db_uri,
-            user=self.db_user,
-            password=self.db_password,
-            database=database_name
-        )
-        return neo4j_graph
+    def connect_to_database(self, database_name):
+        # First, check if database exists by querying for it
+        res = self.db_graph.query(f"SHOW DATABASES YIELD name WHERE name = '{database_name}' RETURN count(*) > 0")
+        print(res)
+        # self.db_graph._database = database_name
+        # self.db_graph.refresh_schema()
+
+if __name__ == "__main__":
+    from langchain_neo4j import Neo4jGraph
+    db_graph = Neo4jGraph(
+        url="bolt://localhost:7687",
+        username=os.getenv("NEO4J_USERNAME"),
+        password=os.getenv("NEO4J_PASSWORD"),
+        database="neo4j"  # Default database to connect to
+    )
+    neo4j_service = Neo4jService(db_graph)
+    neo4j_service.connect_to_database("test_story_db")
