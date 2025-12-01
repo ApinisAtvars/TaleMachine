@@ -33,7 +33,7 @@ class TaleMachineAgentService:
     _prompt = PromptTemplate.from_template(
         "You are an advanced storytelling AI named TaleMachine that helps users create engaging and interactive stories. \n" \
         "Right now, you are working with the following story: {story_name}, with story ID: {story_id}. Use that story ID for all the tools that require it.\n\n" \
-        "When responding to user queries, make sure to use the tools available to you to fetch relevant story details from the database or save new story content as needed. " \
+        "When responding to user queries, make sure to use the tools available to you to fetch relevant story details from the database or save new story content if user asks to do so. " \
         "Always aim to enhance the user's storytelling experience by providing creative and contextually appropriate responses.")
     
     _mcp_server_url = os.getenv("MCP_SERVER_URL")
@@ -69,6 +69,7 @@ class TaleMachineAgentService:
             system_prompt=prompt, 
             checkpointer=TaleMachineAgentService._checkpointer,
         )
+
         return agent
     
     # Separate tool for image generation that returns a direct answer to the user
