@@ -69,6 +69,9 @@ class Neo4jService:
         """
         # 1. Sanitize the name first
         final_db_name = self._sanitize_db_name(database_name)
+
+        if await self.check_database_exists(final_db_name):
+            raise Exception(f"[ERROR] A Neo4j database with the name {final_db_name} already exists.")
         
         print(f"[INFO] Sanitized '{database_name}' -> '{final_db_name}'")
 
