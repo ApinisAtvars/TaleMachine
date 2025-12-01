@@ -7,7 +7,7 @@ import asyncio
 
 # Extend Python path for backend imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from backend.services.agent import TaleMachineAgent
+from backend.services.agent_service import TaleMachineAgent
 
 # Session variables initialization
 if "user_id" not in st.session_state:

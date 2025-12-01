@@ -1,62 +1,70 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import List
 from datetime import datetime
 
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from models.postgres.Story import Story
+
 story_router = APIRouter(prefix="/story", tags=["story"])
 
-class StoryCreate(BaseModel):
-    content: str
-
-class StoryUpdate(BaseModel):
-    content: str
-
-class Story(BaseModel):
-    id: int
-    content: str
-    timestamp: str
-
-@story_router.get("", response_model=List[Story])
-async def get_stories():
+@story_router.post("/insert")
+async def insert_story(title:str, neo_database_name:str, request: Request):
+    """Insert a new story"""
+    try:
+        new_story = Story(
+            title=title,
+            neo_database_name=neo_database_name)
+        
+        created_story = await request.app.state.db.insert_story(new_story)
+        return created_story.model_dump()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@story_router.get("/find/{story_id}")
+async def get_story(story_id: int, request: Request):
+    """Get a story by its ID"""
+    try:
+        story = await request.app.state.db.get_story_by_id(story_id)
+        if story:
+            return story.model_dump()
+        else:
+            raise HTTPException(status_code=404, detail="Story not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@story_router.get("/all")
+async def get_all_stories(request: Request):
     """Get all stories"""
-    # TODO: Implement database query
-    stories = [
-        {"id": 1, "content": "Hello", "timestamp": "2024-01-01T10:00:00"},
-        {"id": 2, "content": "World", "timestamp": "2024-01-01T10:01:00"}
-    ]
-    return stories
-
-@story_router.get("/{story_id}", response_model=Story)
-async def get_story(story_id: int):
-    """Get a specific story by ID"""
-    # TODO: Implement database query
-    story = {"id": story_id, "content": "Example story", "timestamp": "2024-01-01T10:00:00"}
-    return story
-
-@story_router.post("", response_model=Story, status_code=201)
-async def create_story(story: StoryCreate):
-    """Create a new story"""
-    # TODO: Implement database insert
-    new_story = {
-        "id": 3,
-        "content": story.content,
-        "timestamp": "2024-01-01T10:02:00"
-    }
-    return new_story
-
-@story_router.put("/{story_id}", response_model=Story)
-async def update_story(story_id: int, story: StoryUpdate):
-    """Update an existing story"""
-    # TODO: Implement database update
-    updated_story = {
-        "id": story_id,
-        "content": story.content,
-        "timestamp": "2024-01-01T10:03:00"
-    }
-    return updated_story
+    try:
+        stories = await request.app.state.db.get_all_stories()
+        return [story.model_dump() for story in stories]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@story_router.post("/update")
+async def update_story_title(story_id: int, new_title: str, request: Request):
+    """Update a story's title"""
+    try:
+        updated_story = await request.app.state.db.update_story_title(story_id, new_title)
+        if updated_story:
+            return updated_story.model_dump()
+        else:
+            raise HTTPException(status_code=404, detail="Story not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @story_router.delete("/{story_id}")
-async def delete_story(story_id: int):
-    """Delete a story"""
-    # TODO: Implement database delete
-    return {"message": "Story deleted successfully"}
+async def delete_story(story_id: int, request: Request):
+    """Delete a story by its ID"""
+    try:
+        success = await request.app.state.db.delete_story_by_id(story_id)
+        if success:
+            return {"detail": "Story deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Story not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

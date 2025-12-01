@@ -1,12 +1,28 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import uvicorn
-from services.agent import TaleMachineAgent
 
-app = FastAPI()
+from routes.StoryRoute import story_router
+from routes.MessagesRoute import messages_router
+from services.postgres_service import PostgresService
 
-@app.get("/")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    database_instance = PostgresService()
+    app.state.db = database_instance
+    yield
+    await database_instance.disconnect()
+
+
+app = FastAPI(lifespan=lifespan)
+
+@app.get("/health")
 async def root():
     return {"message": "Tale Machine Backend is running."}
+
+# Include routers
+app.include_router(story_router)
+app.include_router(messages_router)
 
 if __name__ == "__main__":
     uvicorn.run(app, port=7890)
