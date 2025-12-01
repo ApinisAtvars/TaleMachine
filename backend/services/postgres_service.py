@@ -40,8 +40,12 @@ class PostgresService:
         return await StoryRepository.insert(self.db_session, new_story)
 
     async def get_story_by_id(self, story_id: int):
+        """Get a story by its ID + Connect to its Neo4j database (if the story exists)"""
         assert isinstance(self.db_session, Session)
-        return await StoryRepository.get_by_id(self.db_session, story_id)
+        story = await StoryRepository.get_by_id(self.db_session, story_id)
+        if story:
+            await self.neo4j_service.connect_to_existing_database(story.neo_database_name)
+        return story
     
     async def get_all_stories(self):
         assert isinstance(self.db_session, Session)
