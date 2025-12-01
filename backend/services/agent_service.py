@@ -51,7 +51,7 @@ class TaleMachineAgentService:
                 return CallToolResult(
                     content=[TextContent(
                         type="text",
-                        text="Story save action was cancelled by the user."
+                        text="Action was cancelled by the user."
                     )],
                     isError=False,
                 )
