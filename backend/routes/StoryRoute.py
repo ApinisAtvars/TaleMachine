@@ -1,7 +1,4 @@
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
-from typing import List
-from datetime import datetime
 
 import os
 import sys

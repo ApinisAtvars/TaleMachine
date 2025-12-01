@@ -5,7 +5,6 @@ import datetime
 
 from models.postgres.Chapter import ChapterBase
 from services.postgres_service import PostgresService
-from models.postgres.ChapterNodeMapping import ChapterNodeMapping
 
 load_dotenv("env/.viola.env")
 
