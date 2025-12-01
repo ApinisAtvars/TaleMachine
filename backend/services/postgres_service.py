@@ -8,19 +8,35 @@ from backend.repositories.postgres.StoryRepository import StoryRepository
 from backend.repositories.postgres.ChapterRepository import ChapterRepository
 from backend.repositories.postgres.ChapterNodeMappingRepository import ChapterNodeMappingRepository
 from backend.repositories.postgres.ImageRepository import ImageRepository
+from backend.services.neo4j_service import Neo4jService
+from backend.models.postgres.Chapter import ChapterBase
+from backend.models.postgres.ChapterNodeMapping import ChapterNodeMappingBase
 
 from sqlalchemy.orm import Session
+from langchain_neo4j import Neo4jGraph
 
 
 class PostgresService:
     def __init__(self):
         start_db()
         self.db_session = SessionLocal()
+        self.db_graph = Neo4jGraph(
+            url="bolt://localhost:7687",
+            username="neo4j",
+            password="qwertyui",
+            enhanced_schema=True
+        )
+        self.neo4j_service = Neo4jService(self.db_graph)
     
     #region story repository
 
     async def insert_story(self, new_story):
         assert isinstance(self.db_session, Session)
+        #1. Create a new Neo4j database for the story
+        neo_database_name = await self.neo4j_service.create_new_database(new_story.title) # Database name is the initial title of the story
+        #2. Set the story's neo_database_name to the new database name
+        new_story.neo_database_name = neo_database_name # The database name is the sanitized final name
+        #3. Insert the story in postgres, and return the created story
         return await StoryRepository.insert(self.db_session, new_story)
 
     async def get_story_by_id(self, story_id: int):
@@ -33,6 +49,10 @@ class PostgresService:
     
     async def delete_story_by_id(self, story_id: int):
         assert isinstance(self.db_session, Session)
+        story = await self.get_story_by_id(story_id)
+        #1. Delete the story's Neo4j database
+        await self.neo4j_service.delete_database(story.neo_database_name)
+        #2. Delete the story from Postgres
         return await StoryRepository.delete_by_id(self.db_session, story_id)
     
     async def update_story_title(self, story_id: int, new_title: str):
@@ -43,9 +63,23 @@ class PostgresService:
 
     #region chapter repository
 
-    async def insert_chapter(self, new_chapter):
+    async def insert_chapter(self, new_chapter: ChapterBase):
+        """
+        When inserting a chapter, we also extract the nodes and relationships from it,
+        and add those to the story's neo4j database.
+        On top of that, we also create the chapter-node mappings in Postgres.
+        """
         assert isinstance(self.db_session, Session)
-        return await ChapterRepository.insert(self.db_session, new_chapter)
+        added_chapter = await ChapterRepository.insert(self.db_session, new_chapter)
+        node_tuples = await self.neo4j_service.insert_story(added_chapter.content)
+        for node_label, node_name in node_tuples:
+            new_mapping = ChapterNodeMappingBase(
+                node_label=node_label,
+                node_name=node_name,
+                chapter_id=added_chapter.id
+            )
+            await ChapterNodeMappingRepository.insert(self.db_session, new_mapping)
+        return added_chapter
     
     async def get_chapter_by_id(self, chapter_id: int):
         assert isinstance(self.db_session, Session)
@@ -60,7 +94,14 @@ class PostgresService:
         return await ChapterRepository.delete_by_id(self.db_session, chapter_id)
     
     async def get_all_chapters_by_story_id(self, story_id: int):
-        assert isinstance(self.db_session, Session)
+        """
+        This function is intended to be called for fetching a session's history
+        When the history is fetched, the user intends to write more chapters
+        Therefore, the neo4j database should be switched to the story's database
+        """
+        story = await self.get_story_by_id(story_id)
+        await self.neo4j_service.connect_to_existing_database(story.neo_database_name)
+
         return await ChapterRepository.get_all_by_story_id(self.db_session, story_id)
     
     #endregion

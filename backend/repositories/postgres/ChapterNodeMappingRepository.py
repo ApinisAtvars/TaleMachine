@@ -3,13 +3,13 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
-from backend.models.postgres.ChapterNodeMapping import ChapterNodeMapping
+from backend.models.postgres.ChapterNodeMapping import ChapterNodeMapping, ChapterNodeMappingBase
 from backend.tables.postgres.ChapterNodeMappingTable import ChapterNodeMappingTable
 
 
 class ChapterNodeMappingRepository:
     @staticmethod
-    async def insert(db: Session, new_mapping: ChapterNodeMapping) -> ChapterNodeMapping:
+    async def insert(db: Session, new_mapping: ChapterNodeMappingBase) -> ChapterNodeMapping:
         try:
             db_object = ChapterNodeMappingTable(**new_mapping.model_dump())
             db.add(db_object)

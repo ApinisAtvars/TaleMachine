@@ -4,12 +4,12 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 from backend.tables.postgres.ChapterTable import ChapterTable
-from backend.models.postgres.Chapter import Chapter
+from backend.models.postgres.Chapter import Chapter, ChapterBase
 from backend.tables.postgres.StoryTable import StoryTable
 
 class ChapterRepository:
     @staticmethod
-    async def insert(db: Session, new_chapter: Chapter) -> Chapter:
+    async def insert(db: Session, new_chapter: ChapterBase) -> Chapter:
         try:
             stories = db.query(StoryTable).filter(StoryTable.id == new_chapter.story_id).first()
             if not stories:
