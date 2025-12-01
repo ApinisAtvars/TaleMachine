@@ -44,10 +44,9 @@ class TaleMachineAgentService:
         request: MCPToolCallRequest,
         handler,
     ) -> CallToolResult:
-        if request.name == "save_story":
-            # Raise interrupt to pause execution
-            value = interrupt("Story save requested. Do you want to proceed?\n Story: " + request.args.get("story_content", ""))
-            print(f"Interrupt value: {value}", file=sys.stderr)
+        if request.name == "save_story" or request.name == "delete_chapter_by_id":
+            value = interrupt({"tool_name": request.name, "args": request.args})
+
             if value == "Action cancelled by user":
                 return CallToolResult(
                     content=[TextContent(
