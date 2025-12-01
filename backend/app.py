@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 import uvicorn
-from services.agent import TaleMachineAgent
 
 app = FastAPI()
 
