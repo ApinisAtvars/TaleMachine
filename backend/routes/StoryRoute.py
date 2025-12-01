@@ -6,7 +6,7 @@ from datetime import datetime
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from backend.models.postgres.Story import Story
+from models.postgres.Story import Story
 
 story_router = APIRouter(prefix="/story", tags=["story"])
 
@@ -23,7 +23,7 @@ async def insert_story(title:str, neo_database_name:str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@story_router.get("/{story_id}")
+@story_router.get("/find/{story_id}")
 async def get_story(story_id: int, request: Request):
     """Get a story by its ID"""
     try:
