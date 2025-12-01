@@ -32,6 +32,11 @@ class PostgresService:
 
     async def insert_story(self, new_story):
         assert isinstance(self.db_session, Session)
+        #0. Check if there already exists a Neo4j database with the same name
+        # The story that this database belongs to can already be renamed to something different
+        sanitized_db_name = self.neo4j_service._sanitize_db_name(new_story.neo_database_name)
+        if await self.neo4j_service.check_database_exists(sanitized_db_name):
+            raise Exception(f"[ERROR] A Neo4j database with the name {new_story.neo_database_name} already exists.")
         #1. Create a new Neo4j database for the story
         neo_database_name = await self.neo4j_service.create_new_database(new_story.title) # Database name is the initial title of the story
         #2. Set the story's neo_database_name to the new database name

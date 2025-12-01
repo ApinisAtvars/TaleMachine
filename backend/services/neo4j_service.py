@@ -69,6 +69,9 @@ class Neo4jService:
         """
         # 1. Sanitize the name first
         final_db_name = self._sanitize_db_name(database_name)
+
+        if await self.check_database_exists(final_db_name):
+            raise Exception(f"[ERROR] A Neo4j database with the name {final_db_name} already exists.")
         
         print(f"[INFO] Sanitized '{database_name}' -> '{final_db_name}'")
 
@@ -178,6 +181,20 @@ class Neo4jService:
             print(f"[SUCCESS] Deleted database '{database_name}'")
         except Exception as e:
             raise Exception(f"[ERROR] Failed to delete database '{database_name}': {e}")
+    
+    async def check_database_exists(self, database_name) -> bool:
+        """
+        Checks if a Neo4j database with the given name exists.
+        """
+        driver = self.db_graph._driver
+        
+        try:
+            with driver.session(database="system") as session:
+                result = session.run("SHOW DATABASES")
+                databases = [record["name"] for record in result]
+                return database_name in databases
+        except Exception as e:
+            raise Exception(f"[ERROR] Failed to check existence of database '{database_name}': {e}")
 
     async def insert_story(self, story: str):
         """
