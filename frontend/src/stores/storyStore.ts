@@ -50,7 +50,7 @@ interface State {
 }
 
 // Base API URL
-const API_URL = 'http://localhost:8000' // Adjust to your backend URL
+const API_URL = 'http://localhost:7890' // Adjust to your backend URL
 
 export const useStoryStore = defineStore('story', {
   state: (): State => ({
@@ -110,8 +110,8 @@ export const useStoryStore = defineStore('story', {
     // POST /story/insert
     async createStory(title: string, neoDatabaseName: string) {
       try {
-        const payload = { title, neo_database_name: neoDatabaseName }
-        const response = await axios.post(`${API_URL}/story/insert`, payload)
+        // const payload = { title, neo_database_name: neoDatabaseName }
+        const response = await axios.post(`${API_URL}/story/insert?title=${title}&neo_database_name=${neoDatabaseName}`)
         this.stories.push(response.data)
         return response.data
       } catch (err: any) {
@@ -208,6 +208,7 @@ export const useStoryStore = defineStore('story', {
              
              // Set interrupt state
              this.interruptTriggered = true
+            //  const parsed_interrupt_msg = JSON.parse(interruptMsg)
              this.interruptMessage = interruptMsg.trim()
              this.streaming = false
              return // Stop reading stream to wait for user input
