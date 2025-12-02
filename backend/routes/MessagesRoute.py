@@ -17,8 +17,6 @@ async def send_message(messages: List[dict], story_name: str, thread_id: str, st
     async def generate():
         try:
             async for response in TaleMachineAgentService.run(messages, story_name, thread_id, story_id, request.app.state.db):
-                if "data:image/png;base64," in response:
-                    await request.app.state.db.insert_image(thread_id, response)
                 yield response
         except Exception as e:
             yield f"Error: {str(e)}"
@@ -30,8 +28,6 @@ async def resume_after_interrupt(thread_id: str, approval: bool, story_name: str
     async def generate():
         try:
             async for response in TaleMachineAgentService.resume_after_interrupt(thread_id, approval, story_name, story_id, request.app.state.db):
-                if "data:image/png;base64," in response:
-                    await request.app.state.db.insert_image(thread_id, response)
                 yield response
         except Exception as e:
             yield f"Error: {str(e)}"
