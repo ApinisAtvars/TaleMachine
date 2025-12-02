@@ -211,3 +211,6 @@ __marimo__/
 **/neo4j_data/
 **/postgres_data/
 **/pgadmin_data/
+
+# Ignore the environment files and API keys
+**service-account-key.json

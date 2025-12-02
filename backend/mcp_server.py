@@ -6,13 +6,13 @@ import datetime
 from models.postgres.Chapter import ChapterBase
 from services.postgres_service import PostgresService
 
-load_dotenv("env/.viola.env")
+load_dotenv()
 
 mcp = FastMCP(
     name = "tale-machine-server",
 )
 
-transport = os.getenv("TRANSPORT", "stdio")
+transport = os.getenv("TRANSPORT", "streamable-http")
 print(f"Starting MCP server with transport: {transport}")
 
 #region Postgres Database Tools
