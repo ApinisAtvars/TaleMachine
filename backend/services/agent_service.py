@@ -25,6 +25,9 @@ from langchain_mcp_adapters.interceptors import (
     MCPToolCallRequest,
 )
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from models.postgres.Image import ImageBase
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -72,49 +75,62 @@ class TaleMachineAgentService:
         return agent
     
     # Separate tool for image generation that returns a direct answer to the user
-    @tool(return_direct=True)
-    async def generate_image(description: str) -> str:
-        """
-        Generate an image based on the provided description. Only the image is returned to the user.
-        """
-        credentials = None
-        service_account_path = os.getenv("VERTEX_SERVICE_ACCOUNT_LOCATION")
-        if service_account_path and os.path.exists(service_account_path):
-            credentials = service_account.Credentials.from_service_account_file(
-                service_account_path,
-                scopes=['https://www.googleapis.com/auth/cloud-platform']
+    @staticmethod
+    def create_generate_image_tool(story_id: int, db_instance):
+        @tool(return_direct=True)
+        async def generate_image(description: str) -> str:
+            """
+            Generate an image based on the provided description. Only the image is returned to the user.
+            """
+            credentials = None
+            service_account_path = os.getenv("VERTEX_SERVICE_ACCOUNT_LOCATION")
+            if service_account_path and os.path.exists(service_account_path):
+                credentials = service_account.Credentials.from_service_account_file(
+                    service_account_path,
+                    scopes=['https://www.googleapis.com/auth/cloud-platform']
+                )
+
+            client = genai.Client(
+                project=os.getenv("VERTEX_PROJECT_ID"), 
+                vertexai=True, 
+                location=os.getenv("VERTEX_PROJECT_LOCATION"),
+                credentials=credentials 
             )
 
-        client = genai.Client(
-            project=os.getenv("VERTEX_PROJECT_ID"), 
-            vertexai=True, 
-            location=os.getenv("VERTEX_PROJECT_LOCATION"),
-            credentials=credentials 
-        )
-
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-image",
-            contents=[f"{description}, high resolution, detailed, realistic"],
-            config=types.GenerateContentConfig(
-                image_config=types.ImageConfig(
-                    aspect_ratio="16:9",
-                    image_size="1K"
-                )
-            ),
-        )
-        
-        for part in response.parts:
-            if part.inline_data is not None:
-                img_bytes = part.inline_data.data
-                img_str = base64.b64encode(img_bytes).decode()
-                if part.text is not None:
-                    return f"{part.text}\n\ndata:image/png;base64,{img_str}"
-                return f"data:image/png;base64,{img_str}"
+            response = client.models.generate_content(
+                model="gemini-2.5-flash-image",
+                contents=[f"{description}, high resolution, detailed, realistic"],
+                config=types.GenerateContentConfig(
+                    image_config=types.ImageConfig(
+                        aspect_ratio="16:9",
+                        image_size="1K"
+                    )
+                ),
+            )
             
-        return "No image generated"
+            for part in response.parts:
+                if part.inline_data is not None:
+                    img_bytes = part.inline_data.data
+                                    
+                    # Save image to file
+                    os.makedirs("generated_images", exist_ok=True)
+                    filename = f"generated_images/image_{hash(description) % 10**8}.png"
+                    with open(filename, "wb") as f:
+                        f.write(img_bytes)
+                    
+                    # save image to the database 
+                    new_image = ImageBase(filename, story_id)
+                    new_image = await db_instance.insert_image(new_image)
+                    img_str = base64.b64encode(img_bytes).decode()
+                    if part.text is not None:
+                        return f"{part.text}\n\ndata:image/png;base64,{img_str}"
+                    return f"data:image/png;base64,{img_str}"
+                
+            return "No image generated"
+        return generate_image
     
     @staticmethod
-    async def run(messages: list, story_name: str, thread_id: str, story_id: int):
+    async def run(messages: list, story_name: str, thread_id: str, story_id: int, db_instance) :
         """Run the agent with a specific thread ID for checkpoint management."""
         try:
             async with streamablehttp_client(TaleMachineAgentService._mcp_server_url) as connection:
@@ -127,7 +143,7 @@ class TaleMachineAgentService:
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
                     tools = await load_mcp_tools(session, tool_interceptors=[TaleMachineAgentService.ask_approval_interceptor])
-                    tools.append(TaleMachineAgentService.generate_image)
+                    tools.append(TaleMachineAgentService.create_generate_image_tool(story_id, db_instance))
 
                     agent = TaleMachineAgentService._initialize_agent(
                         tools=tools,
@@ -177,7 +193,7 @@ class TaleMachineAgentService:
             raise e
 
     @staticmethod
-    async def resume_after_interrupt(thread_id: str, approved: bool, story_name: str, story_id: int):
+    async def resume_after_interrupt(thread_id: str, approved: bool, story_name: str, story_id: int, db_instance) :
         """Resume agent execution after an interrupt with approval/rejection."""
         try:
             async with streamablehttp_client(TaleMachineAgentService._mcp_server_url) as connection:
@@ -190,7 +206,7 @@ class TaleMachineAgentService:
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
                     tools = await load_mcp_tools(session, tool_interceptors=[TaleMachineAgentService.ask_approval_interceptor])
-                    tools.append(TaleMachineAgentService.generate_image)
+                    tools.append(TaleMachineAgentService.create_generate_image_tool(story_id, db_instance))
 
                     agent = TaleMachineAgentService._initialize_agent(
                         tools=tools,
