@@ -42,6 +42,7 @@ interface State {
   // UI States
   loading: boolean
   streaming: boolean
+  savingStory: boolean
   error: string | null
   
   // Interrupt Handling
@@ -65,6 +66,7 @@ export const useStoryStore = defineStore('story', {
     error: null,
     interruptTriggered: false,
     interruptMessage: '',
+    savingStory: false,
   }),
 
   getters: {
@@ -170,6 +172,7 @@ export const useStoryStore = defineStore('story', {
       try {
         const response = await axios.get(`${API_URL}/chapter/all/${storyId}`)
         this.currentChapters = response.data
+        this.messages = this.currentChapters.map(chapter => ({ role: 'assistant', content: chapter.content }))
       } catch (err: any) {
         this.error = err.message
       }
@@ -201,17 +204,35 @@ export const useStoryStore = defineStore('story', {
           
           // Check for interrupt signal as seen in Python code
           if (chunk.includes('__interrupt__:')) {
-             const [cleanContent, interruptMsg] = chunk.split('__interrupt__:')
-             
-             // Append the text before the interrupt tag
-             this.messages[messageIndex].content += cleanContent
-             
-             // Set interrupt state
-             this.interruptTriggered = true
-            //  const parsed_interrupt_msg = JSON.parse(interruptMsg)
-             this.interruptMessage = interruptMsg.trim()
-             this.streaming = false
-             return // Stop reading stream to wait for user input
+            const [cleanContent, interruptMsg] = chunk.split('__interrupt__:');
+            
+            this.messages[messageIndex].content += cleanContent;
+            this.interruptTriggered = true;
+
+            try {
+                // 1. Parse Python-style dict using Function constructor
+                // This handles single quotes and the specific structure shown in the image
+                const parsed_interrupt_msg = (new Function("return " + interruptMsg))();
+
+                if (parsed_interrupt_msg && parsed_interrupt_msg['tool_name'] === 'save_story') {
+                    // 2. Access args directly (No JSON.parse needed here)
+                    const storyArgs = parsed_interrupt_msg['args'];
+                    
+                    this.interruptMessage = `The agent needs your approval to save the story.\nDo you want to proceed?\nStory:\n${storyArgs['story_content']}`;
+                } else if (parsed_interrupt_msg && parsed_interrupt_msg['tool_name'] === 'delete_chapter_by_id') {
+                    const chapterArgs = parsed_interrupt_msg['args'];
+
+                    this.interruptMessage = `The agent needs your approval to delete chapter ID ${chapterArgs['chapter_id']}.\nDo you want to proceed?\nChapter Content:\n${chapterArgs['chapter_content']}`;
+                } else {
+                    this.interruptMessage = interruptMsg.trim();
+                }
+            } catch (e) {
+                console.error("Failed to parse interrupt message", e);
+                this.interruptMessage = "Error parsing content.";
+            }
+            
+            this.streaming = false;
+            return; 
           }
 
           this.messages[messageIndex].content += chunk
@@ -273,7 +294,7 @@ export const useStoryStore = defineStore('story', {
             story_name: this.currentStory.title,
             thread_id: this.threadId,
             story_id: this.currentStory.id,
-            user_approval: userApproval
+            approval: userApproval
         }
 
         const response = await fetch(`${API_URL}/messages/resume_after_interrupt`, {
@@ -283,13 +304,6 @@ export const useStoryStore = defineStore('story', {
         })
 
         if (!response.ok) throw new Error(response.statusText)
-
-        // Resume stream into the existing or new message
-        // Usually, we append to the last message if the previous one was cut off,
-        // but it's safer to create a continuation chunk or append to the last one.
-        // Re-using _processStreamResponse will create a NEW message entry.
-        // If you want to merge it, logic inside _processStreamResponse needs tweaking.
-        // For now, let's treat the resumption as a continuation block.
         
         await this._processStreamResponse(response)
 

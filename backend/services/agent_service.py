@@ -85,10 +85,12 @@ class TaleMachineAgentService:
             credentials = None
             service_account_path = os.getenv("VERTEX_SERVICE_ACCOUNT_LOCATION")
             if service_account_path and os.path.exists(service_account_path):
+                print("[DEBUG] Path to service account exists")
                 credentials = service_account.Credentials.from_service_account_file(
                     service_account_path,
                     scopes=['https://www.googleapis.com/auth/cloud-platform']
                 )
+                print("[DEBUG] Loaded credentials from service account file")
 
             client = genai.Client(
                 project=os.getenv("VERTEX_PROJECT_ID"), 
@@ -119,7 +121,7 @@ class TaleMachineAgentService:
                         f.write(img_bytes)
                     
                     # save image to the database 
-                    new_image = ImageBase(filename, story_id)
+                    new_image = ImageBase(image_path=filename, story_id=story_id)
                     new_image = await db_instance.insert_image(new_image)
                     img_str = base64.b64encode(img_bytes).decode()
                     if part.text is not None:
