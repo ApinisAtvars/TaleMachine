@@ -3,13 +3,9 @@ from fastapi import Form, UploadFile, File
 from typing import List, Union
 import json
 
-class Message(BaseModel):
-    role: str
-    content: str
-    
 class MessageRequest(BaseModel):
     """Represents a question request by the user to the agent."""
-    messages: List[Message]
+    messages: List[dict]
     story_name: str
     thread_id: str
     story_id: int
