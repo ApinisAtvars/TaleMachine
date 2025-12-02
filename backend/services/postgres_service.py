@@ -100,6 +100,7 @@ class PostgresService:
     
     async def delete_chapter_by_id(self, chapter_id: int):
         assert isinstance(self.db_session, Session)
+        
         return await ChapterRepository.delete_by_id(self.db_session, chapter_id)
     
     async def get_all_chapters_by_story_id(self, story_id: int):
