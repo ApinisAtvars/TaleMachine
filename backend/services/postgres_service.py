@@ -50,6 +50,7 @@ class PostgresService:
         story = await StoryRepository.get_by_id(self.db_session, story_id)
         if story:
             await self.neo4j_service.connect_to_existing_database(story.neo_database_name)
+            print(f"[DEBUG] Connected to Neo4j database: {story.neo_database_name}")
         return story
     
     async def get_all_stories(self):
@@ -79,6 +80,10 @@ class PostgresService:
         On top of that, we also create the chapter-node mappings in Postgres.
         """
         assert isinstance(self.db_session, Session)
+
+        # Ensure we are connected to the correct Neo4j database
+        await self.get_story_by_id(new_chapter.story_id)
+
         added_chapter = await ChapterRepository.insert(self.db_session, new_chapter)
         node_tuples = await self.neo4j_service.insert_story(added_chapter.content)
         for node_label, node_name in node_tuples:
@@ -154,6 +159,7 @@ if __name__ == "__main__":
     from backend.models.postgres.ChapterNodeMapping import ChapterNodeMappingBase
     from backend.models.postgres.Image import ImageBase
 
+    #region Tests
     async def run_tests():
         print("--- Starting Tests ---")
 
@@ -248,3 +254,4 @@ if __name__ == "__main__":
         print("\n--- Tests Completed ---")
 
     asyncio.run(run_tests())
+    #endregion
