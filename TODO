@@ -1,1 +1,2 @@
-Nodes are still added to the default graph in Neo4j
+- [ ] Nodes are still added to the default graph in Neo4j
+- [ ] The AI tries to save ALL chapters in a conversation (but you can specify that you want to save only *this* chapter)

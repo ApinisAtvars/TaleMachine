@@ -12,6 +12,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
+import { LoaderIcon } from 'lucide-vue-next'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+
 import { useStoryStore } from '@/stores/storyStore'
 
 const props = defineProps<{
@@ -140,17 +145,19 @@ watch(
             @keydown="handleKeydown"
             class="min-h-[3rem] max-h-[10rem]"
           />
-          <InputGroupAddon align="block-end">
+          <InputGroupAddon align="inline-end">
             <InputGroupButton
               variant="default"
               class="rounded-full"
               size="icon-xs"
               :disabled="!messageInput.trim() || storyStore.streaming"
               @click="handleSend"
+              v-if="!storyStore.loading && !storyStore.streaming"
             >
               <ArrowUpIcon class="size-4" />
               <span class="sr-only">Send</span>
             </InputGroupButton>
+            <Spinner v-else class="size-5 text-primary" />
           </InputGroupAddon>
         </InputGroup>
         <div class="text-xs text-muted-foreground text-center mt-2">
@@ -165,7 +172,9 @@ watch(
         <DialogHeader>
           <DialogTitle>Permission Request</DialogTitle>
           <DialogDescription>
-            {{ storyStore.interruptMessage || 'The AI needs your approval to proceed.' }}
+            <ScrollArea class="h-[300px] w-full rounded-md border p-4">
+              {{ storyStore.interruptMessage || 'The AI needs your approval to proceed.' }}
+            </ScrollArea>
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
