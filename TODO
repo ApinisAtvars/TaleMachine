@@ -12,3 +12,5 @@
 - [ ] Write a user guide that will be shown on the home page - Viola
 - [ ] Write documentation
 - [ ] Adjust compose file to include all services - Viola
+- [ ] Create a service for frontend in docker compose - Atvars
+- [ ] Export the env variables and requirements for each service (send on Teams) - Atvars
