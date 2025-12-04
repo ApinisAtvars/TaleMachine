@@ -12,3 +12,4 @@
 - [ ] Write a user guide that will be shown on the home page - Viola
 - [ ] Write documentation
 - [ ] Adjust compose file to include all services - Viola
+- [ ] Add entity grouping / recognition to Neo4j (e.g. John Smith and John should be the same entity.)

@@ -9,6 +9,7 @@ from routes.StoryRoute import story_router
 from routes.MessagesRoute import messages_router
 from routes.ImagesRouter import images_router
 from routes.ChapterRouter import chapter_router
+from routes.Neo4jRouter import neo4j_router
 from services.postgres_service import PostgresService
 
 @asynccontextmanager
@@ -41,6 +42,7 @@ app.include_router(story_router)
 app.include_router(messages_router)
 app.include_router(images_router)
 app.include_router(chapter_router)
+app.include_router(neo4j_router)
 
 # Mount images folder
 app.mount("/generated_images", StaticFiles(directory=UPLOAD_DIR), name="generated_images")

@@ -209,6 +209,12 @@ class PostgresService:
     
     #endregion
 
+    #region Neo4j service
+    async def get_all_nodes_and_relationships(self, database_name: str):
+        return await self.neo4j_service.get_all_nodes_and_relationships(database_name)
+    
+    #endregion
+
 if __name__ == "__main__":
     start_db()
     service = PostgresService()

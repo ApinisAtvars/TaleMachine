@@ -236,6 +236,17 @@ class Neo4jService:
             for node in graph_doc.nodes:
                 node_label_node_name_pairs.append((node.type, node.id))
         return node_label_node_name_pairs
+    
+    async def get_all_nodes_and_relationships(self, database_name: str) -> list[dict]:
+        """
+        Retrieves all nodes and relationships from the specified database.
+        Returns a list of dictionaries representing nodes and relationships.
+        """
+        await self.connect_to_existing_database(database_name)
+
+        query = "MATCH (n)-[r]->(m) RETURN n, labels(n), r, m, labels(m)"
+
+        return self.db_graph.query(query)
 
 if __name__ == "__main__":
     from langchain_neo4j import Neo4jGraph
