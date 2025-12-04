@@ -1,2 +1,8 @@
-- [ ] Nodes are still added to the default graph in Neo4j
-- [ ] The AI tries to save ALL chapters in a conversation (but you can specify that you want to save only *this* chapter)
+- [x] EXTRA_TESTING_NEEDED The AI tries to save ALL chapters in a conversation (but you can specify that you want to save only *this* chapter)
+- [ ] Close the database connections when shutting down
+- [x] Chapters need to be ordered by the sort key in the frontend
+- [ ] Duplicate chapter titles can exist for the same story.
+- [ ] Make the model NOT mention the chapter IDs - but maybe it's good that it writes it down? Example: "The prologue has an ID of 5 and Chapter 1 has an ID of 4. I will write a new chapter and insert it between them."
+- [ ] Maybe LLM will get confused about the order of the messages?
+- [ ] Have a NotebookLM approach to showing chapters and 
+- [x] SOLVED by including `get_chapter_by_title` tool and including chapter titles as a nullable field in Messages array in the frontend. "I can save this chapter for you. However, the `save_chapter` tool requires a `previous_chapter_id` to place it correctly in the story's sequence. Since you mentioned saving it "after the prologue," I need the ID of the prologue chapter to link this new chapter correctly."

@@ -1,3 +1,4 @@
+import datetime
 import sys
 import os
 
@@ -9,7 +10,7 @@ from backend.repositories.postgres.ChapterRepository import ChapterRepository
 from backend.repositories.postgres.ChapterNodeMappingRepository import ChapterNodeMappingRepository
 from backend.repositories.postgres.ImageRepository import ImageRepository
 from backend.services.neo4j_service import Neo4jService
-from backend.models.postgres.Chapter import ChapterBase
+from backend.models.postgres.Chapter import ChapterBase, ChapterCreate
 from backend.models.postgres.ChapterNodeMapping import ChapterNodeMappingBase
 
 from sqlalchemy.orm import Session
@@ -76,7 +77,7 @@ class PostgresService:
     async def insert_chapter(self, new_chapter: ChapterBase):
         """
         When inserting a chapter, we also extract the nodes and relationships from it,
-        and add those to the story's neo4j database.
+        and add those to the story's neo4j database.\n
         On top of that, we also create the chapter-node mappings in Postgres.
         """
         assert isinstance(self.db_session, Session)
@@ -95,6 +96,61 @@ class PostgresService:
             await ChapterNodeMappingRepository.insert(self.db_session, new_mapping)
         return added_chapter
     
+    async def insert_chapter_with_ordering(
+        self, 
+        content: str, 
+        title: str, 
+        story_id: int, 
+        insert_after_chapter_id: int | None = None,
+        insert_at_start: bool = False
+    ):
+        assert isinstance(self.db_session, Session)
+        
+        new_sort_order = 0.0
+        GAP = 10000.0
+
+        # --- LOGIC BRANCHING ---
+        if insert_at_start:
+            # SCENARIO 0: Insert at the very beginning
+            min_order = await ChapterRepository.get_min_sort_order(self.db_session, story_id)
+            if min_order is None:
+                # Story is empty, just start at GAP
+                new_sort_order = GAP
+            else:
+                # Place before the current first chapter
+                new_sort_order = min_order / 2.0
+
+        elif insert_after_chapter_id is None:
+            # SCENARIO 1: Append to the end
+            max_order = await ChapterRepository.get_max_sort_order(self.db_session, story_id)
+            new_sort_order = max_order + GAP
+            
+        else:
+            # SCENARIO 2: Squeeze between existing chapters
+            prev_chapter = await ChapterRepository.get_by_id(self.db_session, insert_after_chapter_id)
+            if not prev_chapter:
+                raise Exception(f"Cannot insert: Chapter ID {insert_after_chapter_id} not found.")
+            
+            prev_order = prev_chapter.sort_order
+            next_chapter = await ChapterRepository.get_next_chapter_by_sort_order(self.db_session, story_id, prev_order)
+            
+            if next_chapter:
+                new_sort_order = (prev_order + next_chapter.sort_order) / 2.0
+            else:
+                new_sort_order = prev_order + GAP
+
+        # Prepare and save...
+        timestamp = int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp())
+        chapter_data = ChapterBase(
+            title=title,
+            content=content,
+            story_id=story_id,
+            timestamp=timestamp,
+            sort_order=new_sort_order 
+        )
+
+        return await self.insert_chapter(chapter_data)
+    
     async def get_chapter_by_id(self, chapter_id: int):
         assert isinstance(self.db_session, Session)
         return await ChapterRepository.get_by_id(self.db_session, chapter_id)
@@ -102,6 +158,10 @@ class PostgresService:
     async def get_all_chapters(self):
         assert isinstance(self.db_session, Session)
         return await ChapterRepository.get_all(self.db_session)
+    
+    async def get_chapter_by_title(self, story_id: int, title: str):
+        assert isinstance(self.db_session, Session)
+        return await ChapterRepository.get_chapter_by_title(self.db_session, story_id, title)
     
     async def delete_chapter_by_id(self, chapter_id: int):
         assert isinstance(self.db_session, Session)

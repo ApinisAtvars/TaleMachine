@@ -109,12 +109,15 @@ watch(
         <!-- Message Content -->
         <div
           class="rounded-lg px-4 py-2 max-w-[80%] whitespace-pre-wrap"
+          
           :class="[
             message.role === 'user' 
               ? 'bg-primary text-primary-foreground' 
               : 'bg-muted text-foreground'
           ]"
         >
+          <div v-if="message.title" class="font-bold mb-1 text-center text-3xl">{{ message.title }}</div>
+          <Separator v-if="message.title" class="my-5" />
           {{ message.content }}
         </div>
 
