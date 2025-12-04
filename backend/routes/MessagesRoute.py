@@ -28,7 +28,7 @@ async def resume_after_interrupt(resume_request: ResumeMessageRequest, request: 
     """Resume after an interrupt with user approval or denial"""
     async def generate():
         try:
-            async for response in TaleMachineAgentService.resume_after_interrupt(resume_request.thread_id, resume_request.approval, resume_request.story_name, resume_request.story_id, request.app.state.db):
+            async for response in TaleMachineAgentService.resume_after_interrupt(resume_request.thread_id, resume_request.approval, resume_request.story_name, resume_request.story_id, request.app.state.db, resume_request.chapter_id):
                 yield response
         except Exception as e:
             yield f"Error: {str(e)}"

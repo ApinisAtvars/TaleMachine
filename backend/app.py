@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from routes.StoryRoute import story_router
@@ -19,6 +21,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+UPLOAD_DIR = "generated_images"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -36,6 +41,9 @@ app.include_router(story_router)
 app.include_router(messages_router)
 app.include_router(images_router)
 app.include_router(chapter_router)
+
+# Mount images folder
+app.mount("/generated_images", StaticFiles(directory=UPLOAD_DIR), name="generated_images")
 
 if __name__ == "__main__":
     uvicorn.run(app, port=7890)

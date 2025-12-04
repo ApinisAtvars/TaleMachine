@@ -14,6 +14,7 @@ export interface Image {
   id: number
   image_path: string
   story_id: number
+  link: string | null // URL to access the image (FASTAPI_URL/)
 }
 
 export interface Chapter {
@@ -49,6 +50,7 @@ interface State {
   
   // Interrupt Handling
   interruptTriggered: boolean
+  imageGenInterruptTriggered: boolean
   interruptMessage: string // The content after "__interrupt__:"
 }
 
@@ -67,6 +69,7 @@ export const useStoryStore = defineStore('story', {
     streaming: false,
     error: null,
     interruptTriggered: false,
+    imageGenInterruptTriggered: false,
     interruptMessage: '',
     savingStory: false,
   }),
@@ -163,6 +166,9 @@ export const useStoryStore = defineStore('story', {
     async fetchImages(storyId: number) {
       try {
         const response = await axios.get(`${API_URL}/images/all/${storyId}`)
+        for (const img of response.data) {
+          img.link = `http://localhost:7890/${img.image_path}`;
+        }
         this.currentImages = response.data
       } catch (err: any) {
         this.error = err.message
@@ -231,6 +237,9 @@ export const useStoryStore = defineStore('story', {
                     const chapterArgs = parsed_interrupt_msg['args'];
 
                     this.interruptMessage = `The agent needs your approval to delete chapter ID ${chapterArgs['chapter_id']}.\nDo you want to proceed?\nChapter Content:\n${chapterArgs['chapter_content']}`;
+                } else if (parsed_interrupt_msg && parsed_interrupt_msg['tool_name'] === 'generate_image') {
+                    this.imageGenInterruptTriggered = true;
+                    this.interruptMessage = "The agent has generated an image. Please, specify the chapter to save it to, or leave blank to save only to the story.";
                 } else {
                     this.interruptMessage = interruptMsg.trim();
                 }
@@ -260,6 +269,7 @@ export const useStoryStore = defineStore('story', {
       this.messages.push({ role: 'user', content: userContent })
       this.streaming = true
       this.interruptTriggered = false
+      this.imageGenInterruptTriggered = false
       this.error = null
 
       try {
@@ -289,21 +299,25 @@ export const useStoryStore = defineStore('story', {
     },
 
     // POST /messages/resume_after_interrupt
-    async resumeAfterInterrupt(userApproval: boolean) {
+    async resumeAfterInterrupt(userApproval: boolean, chapterId: number | null) {
       if (!this.currentStory) return
 
       // Reset interrupt state
       this.interruptTriggered = false
+      this.imageGenInterruptTriggered = false
       this.interruptMessage = ''
       this.streaming = true
 
       try {
+        // Prepare Payload
         const payload = {
             story_name: this.currentStory.title,
             thread_id: this.threadId,
             story_id: this.currentStory.id,
-            approval: userApproval
+            approval: userApproval,
+            chapter_id: chapterId || -1 // Send -1 if no chapterId
         }
+        console.log("Resume Payload:", payload)
 
         const response = await fetch(`${API_URL}/messages/resume_after_interrupt`, {
             method: 'POST',

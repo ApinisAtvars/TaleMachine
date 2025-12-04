@@ -73,6 +73,8 @@ class TaleMachineAgentService:
                     isError=False,
                 )
 
+
+
         # Execute the tool
         result = await handler(request)
         return result
@@ -89,13 +91,15 @@ class TaleMachineAgentService:
         return agent
     
     # Separate tool for image generation that returns a direct answer to the user
+    # This is a tricky one
     @staticmethod
     def create_generate_image_tool(story_id: int, db_instance):
         @tool(return_direct=True)
         async def generate_image(description: str) -> str:
             """
-            Generate an image based on the provided description. Only the image is returned to the user.
+            Generate an image based on the provided description. A url to the generated image will be returned.
             """
+            # 1. Generate and save the image as a file
             credentials = None
             service_account_path = os.getenv("VERTEX_SERVICE_ACCOUNT_LOCATION")
             if service_account_path and os.path.exists(service_account_path):
@@ -133,14 +137,22 @@ class TaleMachineAgentService:
                     filename = f"generated_images/image_{hash(description) % 10**8}.png"
                     with open(filename, "wb") as f:
                         f.write(img_bytes)
-                    
-                    # save image to the database 
-                    new_image = ImageBase(image_path=filename, story_id=story_id)
+                    #2. Send an interrupt before saving the image in Postgres 
+                    # (User can specify if they want to save it to a chapter or just the story)
+                    value = interrupt({
+                        "tool_name": "generate_image"})        
+
+                    # save image to the database (if the user doesn't want to save it to a chapter, the value passed should be -1)
+                    if value == -1:
+                        new_image = ImageBase(image_path=filename, story_id=story_id, chapter_id=None)
+                    else:
+                        new_image = ImageBase(image_path=filename, story_id=story_id, chapter_id=value) 
                     new_image = await db_instance.insert_image(new_image)
-                    img_str = base64.b64encode(img_bytes).decode()
-                    if part.text is not None:
-                        return f"{part.text}\n\ndata:image/png;base64,{img_str}"
-                    return f"data:image/png;base64,{img_str}"
+                    # img_str = base64.b64encode(img_bytes).decode()
+                    # if part.text is not None:
+                    #     return f"{part.text}\n\ndata:image/png;base64,{img_str}"
+                    # return f"data:image/png;base64,{img_str}"
+                    return f"/generated_images/{os.path.basename(filename)}"
                 
             return "No image generated"
         return generate_image
@@ -209,7 +221,7 @@ class TaleMachineAgentService:
             raise e
 
     @staticmethod
-    async def resume_after_interrupt(thread_id: str, approved: bool, story_name: str, story_id: int, db_instance) :
+    async def resume_after_interrupt(thread_id: str, approved: bool, story_name: str, story_id: int, db_instance, chapter_id: int | None = None) :
         """Resume agent execution after an interrupt with approval/rejection."""
         try:
             async with streamablehttp_client(TaleMachineAgentService._mcp_server_url) as connection:
@@ -236,8 +248,11 @@ class TaleMachineAgentService:
                     }
 
                     if approved:
+                        if chapter_id is not None:
+                            command = Command(resume=chapter_id)
                         # Resume with None to continue execution
-                        command = Command(resume=True)
+                        else:
+                            command = Command(resume=True)
                     else:
                         # Send a Command to cancel the current operation
                         command = Command(resume="Action cancelled by user")

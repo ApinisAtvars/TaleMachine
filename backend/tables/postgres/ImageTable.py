@@ -10,5 +10,7 @@ class ImageTable(Base): # Stores the image path + the story that this image is f
     __tablename__ = 'images'
     id = Column(Integer, primary_key=True, index=True, autoincrement=True) # One to many relationship with Story
     image_path = Column(String)  # Path to the image file
-    story_id = Column(Integer, ForeignKey('stories.id', ondelete="CASCADE"))  # Foreign key to stories table
+    story_id = Column(Integer, ForeignKey('stories.id', ondelete="CASCADE"), nullable=False)  # Foreign key to stories table
+    chapter_id = Column(Integer, ForeignKey('chapters.id', ondelete="CASCADE"), nullable=True)  # Nullable foreign key to chapters table
     story = relationship("StoryTable")
+    chapter = relationship("ChapterTable")

@@ -145,7 +145,7 @@ class Neo4jService:
     def _sanitize_db_name(self, name):
         """
         Sanitizes a string to be a valid Neo4j database name.
-        Rules: 3-63 chars, start with letter, only alphanumeric/dot/dash.
+        Rules: 3-63 chars, start with alphanumeric, only alphanumeric/dot/dash.
         """
         # 1. Lowercase
         clean_name = name.lower()
@@ -153,9 +153,9 @@ class Neo4jService:
         # 2. Replace invalid characters (anything not a-z, 0-9, ., -) with empty string
         clean_name = re.sub(r'[^a-z0-9.-]', '', clean_name)
         
-        # 3. Ensure it starts with a letter. If not, prepend 'db-'
-        if not clean_name or not clean_name[0].isalpha():
-            clean_name = f"db-{clean_name}"
+        # 3. Ensure it starts with an alphanumeric char. If not, prepend 'DB'
+        if not clean_name or not clean_name[0].isalnum():
+            clean_name = f"DB{clean_name}"
             
         # 4. Truncate to 63 chars max
         clean_name = clean_name[:63]

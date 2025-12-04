@@ -16,3 +16,4 @@ class ResumeMessageRequest(BaseModel):
     approval: bool
     story_name: str
     story_id: int
+    chapter_id: int # -1 for None (limitation of interrupt tool)
