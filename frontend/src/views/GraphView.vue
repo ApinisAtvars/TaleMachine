@@ -34,7 +34,6 @@
             {{ store.selectedNode ? 'Node Details' : 'Relationship' }}
           </h3>
           <button @click="clearSelection" class="text-slate-400 hover:text-slate-700 transition-colors">
-            <!-- X Icon -->
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
           </button>
         </div>
@@ -43,34 +42,27 @@
           
           <!-- Node Content -->
           <div v-if="store.selectedNode">
-            <!-- Identity -->
             <div class="mb-4">
                <h2 class="text-xl font-bold text-slate-900 leading-tight">
                  {{ store.selectedNode.properties.id }}
                </h2>
                <div class="flex flex-wrap gap-1 mt-2">
                 <span v-for="label in store.selectedNode.labels" :key="label"
-                      class="px-2.5 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full border border-blue-200">
+                      :style="{ backgroundColor: getLabelColor(label, 0.15), color: getLabelColor(label, 1.0), borderColor: getLabelColor(label, 0.3) }"
+                      class="px-2.5 py-0.5 text-xs font-bold rounded-full border">
                   {{ label }}
                 </span>
               </div>
             </div>
 
-            <!-- Specific Properties Highlight -->
             <div v-if="store.selectedNode.properties.description" class="bg-slate-50 p-3 rounded-md border border-slate-100 text-sm text-slate-600 italic mb-4">
               "{{ store.selectedNode.properties.description }}"
             </div>
 
-            <!-- Key-Value Table -->
             <div class="space-y-3">
-              <div v-for="(val, key) in filterProps(store.selectedNode.properties)" :key="key" 
-                   class="text-sm group">
-                <span class="text-xs font-bold text-slate-400 uppercase block mb-0.5 group-hover:text-slate-600 transition-colors">
-                  {{ key }}
-                </span>
-                <span class="text-slate-700 break-words leading-relaxed block bg-slate-50 px-2 py-1 rounded border border-slate-100">
-                  {{ val }}
-                </span>
+              <div v-for="(val, key) in filterProps(store.selectedNode.properties)" :key="key" class="text-sm group">
+                <span class="text-xs font-bold text-slate-400 uppercase block mb-0.5">{{ key }}</span>
+                <span class="text-slate-700 break-words leading-relaxed block bg-slate-50 px-2 py-1 rounded border border-slate-100">{{ val }}</span>
               </div>
             </div>
           </div>
@@ -93,22 +85,6 @@
         </div>
       </div>
     </transition>
-
-    <!-- Controls / Legend -->
-    <div class="absolute bottom-4 left-4 flex flex-col gap-2">
-      <div class="bg-white/90 backdrop-blur border rounded-lg shadow-sm p-3 text-xs text-slate-600 min-w-[150px]">
-        <div class="font-bold mb-2 text-slate-800">Graph Controls</div>
-        <div class="flex items-center gap-2 mb-1">
-          <span class="w-4 h-4 flex items-center justify-center bg-slate-100 rounded border">🖱</span>
-          <span>Drag to move</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="w-4 h-4 flex items-center justify-center bg-slate-100 rounded border">🔍</span>
-          <span>Scroll to zoom</span>
-        </div>
-      </div>
-    </div>
-
   </div>
 </template>
 
@@ -116,7 +92,6 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import * as d3 from 'd3'
 import { useNeo4jStore, type GraphNode, type GraphLink } from '@/stores/neo4jStore'
-
 
 const store = useNeo4jStore()
 const containerRef = ref<HTMLElement | null>(null)
@@ -129,16 +104,12 @@ let g: d3.Selection<SVGGElement, unknown, null, undefined>
 // --- Configuration ---
 const NODE_RADIUS = 24
 const LINK_LENGTH = 180
-// A Neo4j-inspired color palette for common labels
-const colorScale = d3.scaleOrdinal()
-  .domain(["Person", "Location", "Item", "Technology", "Event", "Organization"])
-  .range(["#fca5a5", "#93c5fd", "#fdba74", "#d8b4fe", "#86efac", "#fcd34d"])
-// Fallback color scheme
-const fallbackColor = d3.scaleOrdinal(d3.schemeTableau10)
 
 onMounted(async () => {
+  if (containerRef.value) {
     initGraph()
     await store.fetchGraphData("pristinechip")
+  }
 })
 
 onUnmounted(() => {
@@ -148,6 +119,24 @@ onUnmounted(() => {
 watch(() => store.nodes, (newNodes) => {
   if (newNodes.length > 0) updateGraph()
 })
+
+// --- DYNAMIC COLOR GENERATOR ---
+// This ensures that "Person" is always the same color, but we don't hardcode "Person".
+// We hash the string to a 0-360 Hue value.
+function getLabelColor(label: string, opacity: number = 1): string {
+  if (!label) return `rgba(156, 163, 175, ${opacity})` // Gray fallback
+
+  let hash = 0;
+  for (let i = 0; i < label.length; i++) {
+    hash = label.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Use HSL for nice colors. 
+  // Modulo 360 gives us the Hue.
+  // We fix Saturation at 65% and Lightness at 45% for readable, professional colors.
+  const h = Math.abs(hash % 360);
+  return `hsla(${h}, 65%, 45%, ${opacity})`;
+}
 
 function initGraph() {
   if (!containerRef.value) return
@@ -169,9 +158,9 @@ function initGraph() {
     .scaleExtent([0.1, 5])
     .on('zoom', (event) => g.attr('transform', event.transform))
   
-  svg.call(zoom).on('dblclick.zoom', null) // Disable double click zoom
+  svg.call(zoom).on('dblclick.zoom', null)
 
-  // Marker for arrows
+  // Arrow marker
   svg.append('defs').append('marker')
     .attr('id', 'arrow')
     .attr('viewBox', '0 -5 10 10')
@@ -208,31 +197,30 @@ function updateGraph() {
       store.selectedLink = d
       store.selectedNode = null
     })
-    .on('mouseenter', function() { d3.select(this).attr('stroke', '#64748b').attr('stroke-width', 3) })
-    .on('mouseleave', function() { 
-      if (store.selectedLink?.id !== (d3.select(this).datum() as GraphLink).id) {
-        d3.select(this).attr('stroke', '#cbd5e1').attr('stroke-width', 2)
-      }
-    })
 
-  // 2. Link Labels
-  const linkLabel = g.selectAll<SVGTextElement, GraphLink>('.link-label')
+  // 2. Link Labels (Background + Text for readability)
+  const linkLabelGroup = g.selectAll<SVGGElement, GraphLink>('.link-label-group')
     .data(store.links, d => d.id)
+    .join('g')
+    .attr('class', 'link-label-group')
+    .style('pointer-events', 'none')
+
+  // Text
+  const linkText = linkLabelGroup.selectAll('text')
+    .data(d => [d])
     .join('text')
-    .attr('class', 'link-label')
     .text(d => d.type)
     .attr('text-anchor', 'middle')
     .attr('dy', -5)
     .style('font-size', '10px')
-    .style('fill', '#64748b')
     .style('font-weight', '600')
-    .style('pointer-events', 'none')
-
-    // Link label background (for readability)
-    .call(text => text.clone(true).lower()
-      .attr("stroke", "#f8fafc")
-      .attr("stroke-width", 3)
-      .attr("stroke-linecap", "round"));
+    .style('fill', '#64748b')
+    // Halo effect for text reading over lines
+    .style('paint-order', 'stroke')
+    .style('stroke', '#f8fafc')
+    .style('stroke-width', '3px')
+    .style('stroke-linecap', 'butt')
+    .style('stroke-linejoin', 'round');
 
   // 3. Nodes
   const node = g.selectAll<SVGGElement, GraphNode>('.node')
@@ -250,29 +238,31 @@ function updateGraph() {
       store.selectedLink = null
     })
 
-  // Circle
+  // Node Circle
   node.append('circle')
     .attr('r', NODE_RADIUS)
     .attr('fill', d => {
+       // Use our new dynamic function
        const label = d.labels[0] || 'Unknown';
-       return (colorScale(label) as string) || fallbackColor(label);
+       return getLabelColor(label);
     })
     .attr('stroke', '#fff')
     .attr('stroke-width', 2)
     .style('cursor', 'grab')
     .style('filter', 'drop-shadow(0 2px 4px rgb(0 0 0 / 0.1))')
 
-  // Label (First 2 chars or Icon could go here)
+  // Node Icon/Text
   node.append('text')
     .text(d => d.properties.id.substring(0, 2).toUpperCase())
     .attr('text-anchor', 'middle')
     .attr('dy', 4)
     .style('font-size', '12px')
     .style('font-weight', 'bold')
-    .style('fill', 'rgba(0,0,0,0.6)')
+    .style('fill', 'white') 
     .style('pointer-events', 'none')
+    .style('text-shadow', '0px 1px 2px rgba(0,0,0,0.3)')
 
-  // Full Name Label (Below Node)
+  // Label Below
   node.append('text')
     .text(d => d.properties.id)
     .attr('text-anchor', 'middle')
@@ -280,7 +270,7 @@ function updateGraph() {
     .style('font-size', '11px')
     .style('fill', '#475569')
     .style('pointer-events', 'none')
-    .style('text-shadow', '1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff')
+    .style('text-shadow', '1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff')
 
   simulation.nodes(store.nodes).on('tick', () => {
     link
@@ -289,9 +279,13 @@ function updateGraph() {
       .attr('x2', d => (d.target as GraphNode).x!)
       .attr('y2', d => (d.target as GraphNode).y!)
 
-    linkLabel
-      .attr('x', d => ((d.source as GraphNode).x! + (d.target as GraphNode).x!) / 2)
-      .attr('y', d => ((d.source as GraphNode).y! + (d.target as GraphNode).y!) / 2)
+    // Update label group position (calculated center)
+    linkLabelGroup
+      .attr('transform', d => {
+        const x = ((d.source as GraphNode).x! + (d.target as GraphNode).x!) / 2
+        const y = ((d.source as GraphNode).y! + (d.target as GraphNode).y!) / 2
+        return `translate(${x},${y})`
+      })
 
     node.attr('transform', d => `translate(${d.x},${d.y})`)
   })
@@ -300,7 +294,6 @@ function updateGraph() {
   simulation.alpha(1).restart()
 }
 
-// Helpers
 function clearSelection() {
   store.selectedNode = null
   store.selectedLink = null
@@ -310,13 +303,11 @@ function getId(node: string | GraphNode): string {
   return typeof node === 'string' ? node : node.id
 }
 
-// Don't show ID twice in the list of properties
 function filterProps(props: Record<string, any>) {
   const { id, ...rest } = props
   return rest
 }
 
-// D3 Dragging
 function dragStarted(event: any, d: GraphNode) {
   if (!event.active && simulation) simulation.alphaTarget(0.3).restart()
   d.fx = d.x
