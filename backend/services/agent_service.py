@@ -27,6 +27,8 @@ from langchain_mcp_adapters.interceptors import (
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from models.postgres.Image import ImageBase
+from vertexai.preview.vision_models import ImageGenerationModel
+import vertexai
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -58,7 +60,6 @@ class TaleMachineAgentService:
         1. DRAFTING PHASE
         - When asked to write content, you must ALWAYS generate the text in the chat window first.
         - You are prohibited from calling the `save_chapter` tool during the initial drafting phase.
-        - Even if the user says "Write and save," you must reply: "I have drafted the content below. Please review it. Shall I save this to the database?"
 
         2. REVIEW PHASE
         - Explicitly ask for user approval before saving.
@@ -70,9 +71,7 @@ class TaleMachineAgentService:
         - Ensure that the **order of chapters is maintained as per user instructions** using `previous_chapter_id` and `insert_at_start` parameters.
 
         *** ANTI-HALLUCINATION & TRUTH GUIDELINES ***
-
-        - ACCURACY: If you are not calling the tool, you must use future-tense phrasing, such as "I am ready to save this" or "Waiting for your confirmation to save."
-        - DATA INTEGRITY: Never invent or hallucinate success messages. If the tool is not called, the data is not saved.
+        - DATA INTEGRITY: Never invent or hallucinate success messages. If the tool is not called, the chapter is not saved.
 
         *** GENERAL BEHAVIOR ***
         - Use your tools to fetch story details or generate images when contextually appropriate.
@@ -85,6 +84,17 @@ class TaleMachineAgentService:
     )
     _mcp_server_url = os.getenv("MCP_SERVER_URL")
     _checkpointer = MemorySaver()
+    _service_account_path = os.getenv("VERTEX_SERVICE_ACCOUNT_LOCATION")
+    if _service_account_path and os.path.exists(_service_account_path):
+        # print("[DEBUG] Path to service account exists")
+        credentials = service_account.Credentials.from_service_account_file(
+            _service_account_path,
+            scopes=['https://www.googleapis.com/auth/cloud-platform']
+        )
+        # print("[DEBUG] Loaded credentials from service account file")
+    vertexai.init(project=os.getenv("VERTEX_PROJECT_ID"), location=os.getenv("VERTEX_PROJECT_LOCATION"), credentials=credentials)
+    
+    _image_generation_model = ImageGenerationModel.from_pretrained("imagen-3.0-generate-001")
 
     # Tool interceptor to ask for user approval before saving a story
     async def ask_approval_interceptor(
@@ -172,16 +182,34 @@ class TaleMachineAgentService:
                     filename = f"generated_images/image_{hash(description) % 10**8}.png"
                     with open(filename, "wb") as f:
                         f.write(img_bytes)   
+            value = interrupt({"tool_name": "generate_image"})   
+            try:
+                images = TaleMachineAgentService._image_generation_model.generate_images(
+                    prompt=description,
+                    number_of_images=1,
+                    aspect_ratio="16:9",
+                    safety_filter_level="block_some",
+                    person_generation="allow_adult"
+                )
+            except Exception as e:
+                return f"Error generating image: {str(e)}"
+            
+            try:
+                img = images[0]
+                os.makedirs("generated_images", exist_ok=True)
+                filename = f"generated_images/image_{hash(description) % 10**8}.png"
+                img.save(filename)
 
-                    # save image to the database (if the user doesn't want to save it to a chapter, the value passed should be -1)
-                    if value == -1:
-                        new_image = ImageBase(image_path=filename, story_id=story_id, chapter_id=None)
-                    else:
-                        new_image = ImageBase(image_path=filename, story_id=story_id, chapter_id=value) 
-                    new_image = await db_instance.insert_image(new_image)
-                    return f"Image generated! You can view it in the gallery now."
-                
-            return "No image generated"
+                # save image to the database (if the user doesn't want to save it to a chapter, the value passed should be -1)
+                if value == -1:
+                    new_image = ImageBase(image_path=filename, story_id=story_id, chapter_id=None)
+                else:
+                    new_image = ImageBase(image_path=filename, story_id=story_id, chapter_id=value) 
+                new_image = await db_instance.insert_image(new_image)
+                return f"Image generated! You can view it in the gallery now."
+            except Exception as e:
+                return f"Error saving image: {str(e)}"
+        
         return generate_image
     
     @staticmethod
