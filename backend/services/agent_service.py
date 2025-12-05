@@ -41,6 +41,17 @@ class TaleMachineAgentService:
         CURRENT CONTEXT
         - Story Title: {story_name}
         - Story ID: {story_id}
+        - Story Length: {story_length} (short = 1-3 chapters, medium = 4-15 chapters, long = 15+ chapters)
+        - Chapter Length: {chapter_length} (short = <500 words, medium = 500-1500 words, long = 1500-4000 words)
+        - Genre: {genre}
+        - Additional Notes (if any): {additional_notes}
+        - Main Characters (if any): {main_characters}
+        - Plot Ideas (if any): {plot_ideas}
+
+        You should plan and write the story in chapters, ensuring each chapter aligns with the specified story length and chapter lengths.
+        Plan the narrative arc, character development, and plot progression accordingly. If the user wants a longer story, ensure the chapters build towards that goal.
+        You will be provided with summaries of previously saved chapters to maintain continuity. If you need more details about past chapters, use your tools to fetch them.
+        If no chapters have been saved yet, begin by drafting the first chapter based on the story context provided.
 
         *** STRICT OPERATIONAL PROTOCOLS ***
 
@@ -56,11 +67,10 @@ class TaleMachineAgentService:
         3. SAVING PHASE
         - Execute the `save_chapter` tool ONLY when the user gives an explicit command (e.g., "Save it", "Looks good", "Commit").
         - When saving, strip all conversational filler, markdown headers (like '## Chapter 1'), and titles from the `content` field. The `content` field must contain the story body text only.
-        - Ensure that the order of chapters is maintained as per user instructions using `previous_chapter_id` and `insert_at_start` parameters.
+        - Ensure that the **order of chapters is maintained as per user instructions** using `previous_chapter_id` and `insert_at_start` parameters.
 
         *** ANTI-HALLUCINATION & TRUTH GUIDELINES ***
 
-        - VERIFICATION OF ACTION: You are forbidden from stating "I have saved the chapter" or "The story is updated" unless you are simultaneously calling the `save_chapter` tool in that exact response turn.
         - ACCURACY: If you are not calling the tool, you must use future-tense phrasing, such as "I am ready to save this" or "Waiting for your confirmation to save."
         - DATA INTEGRITY: Never invent or hallucinate success messages. If the tool is not called, the data is not saved.
 
@@ -68,6 +78,9 @@ class TaleMachineAgentService:
         - Use your tools to fetch story details or generate images when contextually appropriate.
         - Do not mention internal IDs (UUIDs) in your text response unless specifically asked.
         - Maintain the requested narrative tone and style strictly.
+
+        Chapter overview and planning should be done in your mind only and not shared with the user unless explicitly requested.
+        Saved chapters and their summary (if available): {chapter_summaries}
         """
     )
     _mcp_server_url = os.getenv("MCP_SERVER_URL")
@@ -166,18 +179,16 @@ class TaleMachineAgentService:
                     else:
                         new_image = ImageBase(image_path=filename, story_id=story_id, chapter_id=value) 
                     new_image = await db_instance.insert_image(new_image)
-                    # img_str = base64.b64encode(img_bytes).decode()
-                    # if part.text is not None:
-                    #     return f"{part.text}\n\ndata:image/png;base64,{img_str}"
-                    # return f"data:image/png;base64,{img_str}"
-                    # return f"/generated_images/{os.path.basename(filename)}"
                     return f"Image generated! You can view it in the gallery now."
                 
             return "No image generated"
         return generate_image
     
     @staticmethod
-    async def run(messages: list, story_name: str, thread_id: str, story_id: int, db_instance) :
+    async def run(messages: list, story_name: str, thread_id: str, story_id: int, db_instance,
+                  story_length: str | None = None, chapter_length: str | None = None, 
+                  genre: str | None = None, additional_notes: str | None = None, 
+                  main_characters: str | None = None, plot_ideas: str | None = None):
         """Run the agent with a specific thread ID for checkpoint management."""
         try:
             async with streamablehttp_client(TaleMachineAgentService._mcp_server_url) as connection:
@@ -192,9 +203,18 @@ class TaleMachineAgentService:
                     tools = await load_mcp_tools(session, tool_interceptors=[TaleMachineAgentService.ask_approval_interceptor])
                     tools.append(TaleMachineAgentService.create_generate_image_tool(story_id, db_instance))
 
+                    chapter_summaries = await db_instance.get_all_summaries_by_story_id(story_id)
                     agent = TaleMachineAgentService._initialize_agent(
                         tools=tools,
-                        prompt=TaleMachineAgentService._prompt.format(story_name=story_name, story_id=story_id)
+                        prompt=TaleMachineAgentService._prompt.format(story_name=story_name, 
+                                                                      story_id=story_id,
+                                                                      story_length=story_length,
+                                                                      chapter_length=chapter_length,
+                                                                      genre=genre,
+                                                                      additional_notes=additional_notes,
+                                                                      main_characters=main_characters,
+                                                                      plot_ideas=plot_ideas,
+                                                                      chapter_summaries=chapter_summaries)
                     )
 
                     # Create thread config with thread_id
@@ -240,7 +260,11 @@ class TaleMachineAgentService:
             raise e
 
     @staticmethod
-    async def resume_after_interrupt(thread_id: str, approved: bool, story_name: str, story_id: int, db_instance, chapter_id: int | None = None) :
+    async def resume_after_interrupt(thread_id: str, approved: bool, story_name: str, story_id: int, 
+                                     db_instance,story_length: str | None = None, chapter_length: str | None = None, 
+                                     genre: str | None = None, additional_notes: str | None = None, 
+                                     main_characters: str | None = None, plot_ideas: str | None = None,
+                                     chapter_id: int | None = None) :
         """Resume agent execution after an interrupt with approval/rejection."""
         try:
             async with streamablehttp_client(TaleMachineAgentService._mcp_server_url) as connection:
@@ -255,9 +279,19 @@ class TaleMachineAgentService:
                     tools = await load_mcp_tools(session, tool_interceptors=[TaleMachineAgentService.ask_approval_interceptor])
                     tools.append(TaleMachineAgentService.create_generate_image_tool(story_id, db_instance))
 
+                    chapter_summaries = await db_instance.get_all_summaries_by_story_id(story_id)
+
                     agent = TaleMachineAgentService._initialize_agent(
                         tools=tools,
-                        prompt=TaleMachineAgentService._prompt.format(story_name=story_name, story_id=story_id)
+                        prompt=TaleMachineAgentService._prompt.format(story_name=story_name, 
+                                                                      story_id=story_id,
+                                                                      story_length=story_length,
+                                                                      chapter_length=chapter_length,
+                                                                      genre=genre,
+                                                                      additional_notes=additional_notes,
+                                                                      main_characters=main_characters,
+                                                                      plot_ideas=plot_ideas,
+                                                                      chapter_summaries=chapter_summaries)
                     )
 
                     config = {
