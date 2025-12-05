@@ -71,9 +71,17 @@ class PostgresService:
         #2. Delete the story from Postgres
         return await StoryRepository.delete_by_id(self.db_session, story_id)
     
-    async def update_story_title(self, story_id: int, new_title: str):
+    async def update_story(self, story_id: int, new_title: str| None = None,
+                           new_story_length: str| None = None, new_chapter_length: str| None = None, 
+                           new_genre: str| None = None, new_additional_notes: str| None = None, 
+                           new_main_characters: str| None = None, 
+                           new_plot_ideas: str| None = None):
         assert isinstance(self.db_session, Session)
-        return await StoryRepository.update_title(self.db_session, story_id, new_title)
+        return await StoryRepository.update_story(self.db_session, story_id, 
+                                                  new_title, new_story_length, 
+                                                  new_chapter_length, new_genre, 
+                                                  new_additional_notes, new_main_characters, 
+                                                  new_plot_ideas)
     
     #endregion
 

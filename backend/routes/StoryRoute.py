@@ -62,10 +62,17 @@ async def get_all_stories(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
     
 @story_router.post("/update")
-async def update_story_title(story_id: int, new_title: str, request: Request):
+async def update_story(story_id: int, request: Request, new_title: str| None = None, 
+                       new_story_length: str| None = None, new_chapter_length: str| None = None, 
+                       new_genre: str| None = None, new_additional_notes: str| None = None, 
+                       new_main_characters: str| None = None, 
+                       new_plot_ideas: str| None = None):
     """Update a story's title"""
     try:
-        updated_story = await request.app.state.db.update_story_title(story_id, new_title)
+        updated_story = await request.app.state.db.update_story(story_id, new_title, 
+                                                                new_story_length, new_chapter_length, 
+                                                                new_genre, new_additional_notes, 
+                                                                new_main_characters, new_plot_ideas)
         if updated_story:
             return updated_story.model_dump()
         else:
