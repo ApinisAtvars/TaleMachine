@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick, computed } from 'vue'
-import { useRoute } from 'vue-router'
 import { ArrowUpIcon, UserIcon, BotIcon, ChevronDownIcon, ImageIcon, XIcon } from 'lucide-vue-next'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from '@/components/ui/input-group'
 import {
@@ -13,7 +12,6 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { LoaderIcon } from 'lucide-vue-next'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -27,21 +25,18 @@ import {
 
 import {
   Card,
-  CardAction,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
 
-import { useStoryStore, type Chapter } from '@/stores/storyStore'
+import { useStoryStore} from '@/stores/storyStore'
 
 const props = defineProps<{
   storyId: string
 }>()
 
-const route = useRoute()
+
 const storyStore = useStoryStore()
 const messageInput = ref('')
 const messagesContainer = ref<HTMLElement | null>(null)
