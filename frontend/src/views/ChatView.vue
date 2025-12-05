@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick, computed } from 'vue'
-import { ArrowUpIcon, UserIcon, BotIcon, ChevronDownIcon, ImageIcon, XIcon } from 'lucide-vue-next'
+import { ArrowUpIcon, UserIcon, BotIcon, ChevronDownIcon, ImageIcon, XIcon, BookMarked } from 'lucide-vue-next'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from '@/components/ui/input-group'
 import {
   Dialog,
@@ -29,6 +29,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable'
 
 import { useStoryStore} from '@/stores/storyStore'
 
@@ -41,8 +46,11 @@ const storyStore = useStoryStore()
 const messageInput = ref('')
 const messagesContainer = ref<HTMLElement | null>(null)
 const selectedChapterId = ref<number | null>(null)
-const isSidebarOpen = ref(false)
+const isImageGalleryOpen = ref(false)
+const isChapterSidebarOpen = ref(false)
 const selectedImage = ref<string | null>(null)
+
+const isAnySidebarOpen = computed(() => isChapterSidebarOpen.value || isImageGalleryOpen.value)
 
 const selectedChapterName = computed(() => {
   if (selectedChapterId.value === null) return 'Save to story'
@@ -111,8 +119,10 @@ watch(
 </script>
 
 <template>
-  <div class="flex h-[calc(100vh-4rem)] relative overflow-hidden">
-    <div class="flex flex-col flex-1 min-w-0 relative">
+  <div class="h-full relative overflow-hidden">
+    <ResizablePanelGroup direction="horizontal" class="h-full items-stretch">
+      <ResizablePanel :default-size="100" :min-size="30">
+        <div class="flex flex-col h-full min-w-0 relative">
     <!-- Messages Area -->
     <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-6">
       <div v-if="storyStore.loading && !storyStore.messages.length" class="flex justify-center items-center h-full text-muted-foreground">
@@ -197,61 +207,105 @@ watch(
       </div>
     </div>
 
-    <!-- Toggle Button -->
+    <!-- Toggle Buttons for Image Gallery and Story Chapters -->
     <Button 
-      v-if="!isSidebarOpen"
+      v-if="!isImageGalleryOpen && !isChapterSidebarOpen"
       variant="outline" 
       size="icon" 
       class="absolute top-4 right-4 z-10 bg-background/80 backdrop-blur-sm shadow-sm hover:bg-background"
-      @click="isSidebarOpen = true"
+      @click="isImageGalleryOpen = true"
       title="Show Images"
     >
       <ImageIcon class="w-4 h-4" />
     </Button>
-    </div>
-
-    <!-- Right Sidebar -->
-    <Card 
-      class="border-l bg-background transition-all duration-300 ease-in-out flex flex-col mt-4"
-      :class="[isSidebarOpen ? 'w-100 translate-x-0' : 'w-0 translate-x-full opacity-0 overflow-hidden border-l-0']"
+    <Button
+      v-if="!isChapterSidebarOpen && !isImageGalleryOpen"
+      variant="outline" 
+      size="icon" 
+      class="absolute top-16 right-4 z-10 bg-background/80 backdrop-blur-sm shadow-sm hover:bg-background"
+      @click="isChapterSidebarOpen = true"
+      title="Show Chapters"
     >
-        <CardHeader class="border-b flex justify-between items-center shrink-0">
-            <CardTitle>Story Image Gallery</CardTitle>
-            <Button variant="ghost" size="icon" @click="isSidebarOpen = false">
-                <XIcon class="w-4 h-4" />
-            </Button>
-        </CardHeader>
-        
-        <CardContent class="flex-1">
-          <ScrollArea class="h-full">
-              <div v-if="storyStore.currentImages.length === 0" class="text-center text-muted-foreground py-8">
-                  No images generated yet.
-              </div>
-              <div v-else class="grid grid-cols-1 gap-4">
-                  <div v-for="image in storyStore.currentImages" :key="image.id" class="space-y-2">
-                      <div class="aspect-square rounded-md overflow-hidden border bg-muted relative group">
-                          <img 
-                              v-if="image.link" 
-                              :src="image.link" 
-                              class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" 
-                              loading="lazy"
-                          />
-                          <div v-else class="flex items-center justify-center h-full text-muted-foreground">
-                              <ImageIcon class="w-8 h-8 opacity-20" />
-                          </div>
-                          
-                          <div 
-                              v-if="image.link"
-                              @click="selectedImage = image.link"
-                              class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer"
-                          >
+      <BookMarked class="w-4 h-4" />
+    </Button>
+    </div>
+      </ResizablePanel>
+
+      <ResizableHandle v-if="isAnySidebarOpen" with-handle />
+
+      <ResizablePanel v-if="isAnySidebarOpen" :default-size="25" :min-size="20" :max-size="50">
+        <!-- Right Card (Chapter Sidebar) -->
+        <Card 
+          v-if="isChapterSidebarOpen"
+          class="bg-background flex flex-col h-full overflow-hidden border-0 rounded-none"
+        >
+          <CardHeader class="border-b flex justify-between items-center shrink-0">
+                <CardTitle>Story Chapter Viewer</CardTitle>
+                <Button variant="ghost" size="icon" @click="isChapterSidebarOpen = false">
+                    <XIcon class="w-4 h-4" />
+                </Button>
+            </CardHeader>
+            
+            <CardContent class="flex-1 min-h-0">
+              <ScrollArea class="h-full">
+                  <div v-if="storyStore.currentChapters.length === 0" class="text-center text-muted-foreground py-8">
+                      No chapters generated yet.
+                  </div>
+                  <div v-else class="grid grid-cols-1 gap-4">
+                      <div v-for="chapter in storyStore.currentChapters" :key="chapter.id" class="space-y-2">
+                          <div class="p-4">
+                              <h3 class="font-bold text-lg mb-2">{{ chapter.title }}</h3>
+                              <p class="text-sm text-foreground/80">{{ chapter.content }}</p>
                           </div>
                       </div>
                   </div>
-              </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+              </ScrollArea>
+            </CardContent>
+        </Card>
+        <!-- Right Card (Image Gallery) -->
+        <Card 
+          v-if="isImageGalleryOpen"
+          class="bg-background flex flex-col h-full overflow-hidden border-0 rounded-none"
+        >
+            <CardHeader class="border-b flex justify-between items-center shrink-0">
+                <CardTitle>Story Image Gallery</CardTitle>
+                <Button variant="ghost" size="icon" @click="isImageGalleryOpen = false">
+                    <XIcon class="w-4 h-4" />
+                </Button>
+            </CardHeader>
+            
+            <CardContent class="flex-1 min-h-0">
+              <ScrollArea class="h-full">
+                  <div v-if="storyStore.currentImages.length === 0" class="text-center text-muted-foreground py-8">
+                      No images generated yet.
+                  </div>
+                  <div v-else class="grid grid-cols-1 gap-4">
+                      <div v-for="image in storyStore.currentImages" :key="image.id" class="space-y-2">
+                          <div class="aspect-square rounded-md overflow-hidden border bg-muted relative group">
+                              <img 
+                                  v-if="image.link" 
+                                  :src="image.link" 
+                                  class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" 
+                                  loading="lazy"
+                              />
+                              <div v-else class="flex items-center justify-center h-full text-muted-foreground">
+                                  <ImageIcon class="w-8 h-8 opacity-20" />
+                              </div>
+                              
+                              <div 
+                                  v-if="image.link"
+                                  @click="selectedImage = image.link"
+                                  class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer"
+                              >
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+      </ResizablePanel>
+    </ResizablePanelGroup>
 
     <!-- Image Preview Dialog -->
     <Dialog :open="!!selectedImage" @update:open="(val) => !val && (selectedImage = null)">

@@ -11,4 +11,11 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    host: true, // Needed for Docker
+    port: 5173,
+    watch: {
+      usePolling: true, // Needed for Windows Docker file changes
+    },
+  },
 })
