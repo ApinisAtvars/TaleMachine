@@ -215,4 +215,6 @@ __marimo__/
 # Ignore the environment files and API keys
 **service-account-key.json
 **generated_images/
+
+**docker_service_data/
 !frontend/src/lib
