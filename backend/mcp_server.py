@@ -52,6 +52,9 @@ async def save_chapter(
         title: The chapter title.
         previous_chapter_id: The ID of the chapter immediately preceding this one (for squeezing in middle).
         insert_at_start: Set True ONLY if inserting before all other chapters.
+    
+    Returns:
+        JSON object with technical details of the created chapter. You must summarize this output to the user.
     """
     try:
         # Calls your PostgresService logic

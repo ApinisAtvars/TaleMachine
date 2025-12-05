@@ -214,5 +214,5 @@ __marimo__/
 
 # Ignore the environment files and API keys
 **service-account-key.json
-
+**generated_images/
 !frontend/src/lib
