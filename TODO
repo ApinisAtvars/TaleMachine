@@ -2,16 +2,16 @@
 - [x] Close the database connections when shutting down - Viola
 - [x] Chapters need to be ordered by the sort key in the frontend
 - [ ] Duplicate chapter titles can exist for the same story.
-- [ ] Make the model NOT mention the chapter IDs - but maybe it's good that it writes it down? Example: "The prologue has an ID of 5 and Chapter 1 has an ID of 4. I will write a new chapter and insert it between them." - Viola
+- [x] Make the model NOT mention the chapter IDs - but maybe it's good that it writes it down? Example: "The prologue has an ID of 5 and Chapter 1 has an ID of 4. I will write a new chapter and insert it between them." - Viola
 - [ ] Maybe LLM will get confused about the order of the messages?
 - [ ] Have a NotebookLM approach to showing chapters and
 - [x] SOLVED by including `get_chapter_by_title` tool and including chapter titles as a nullable field in Messages array in the frontend. "I can save this chapter for you. However, the `save_chapter` tool requires a `previous_chapter_id` to place it correctly in the story's sequence. Since you mentioned saving it "after the prologue," I need the ID of the prologue chapter to link this new chapter correctly."
 - [ ] Still an issue with Neo4j database name including "-" when creating a story that includes a "-"
 - [ ] Make image chapter show up when hovering over image
-- [ ] Write a better, extensive prompt for the agent - Viola
+- [x] Write a better, extensive prompt for the agent - Viola
 - [ ] Write a user guide that will be shown on the home page - Viola
 - [ ] Write documentation
 - [ ] Adjust compose file to include all services - Viola
-- [ ] Add entity grouping / recognition to Neo4j (e.g. John Smith and John should be the same entity.)- [ ] Create a service for frontend in docker compose - Atvars
+- [ ] Add entity grouping / recognition to Neo4j (e.g. John Smith and John should be the same entity.)
 - [ ] Export the env variables and requirements for each service (send on Teams) - Atvars
 - [ ] Create a service for frontend in docker compose - Atvars
