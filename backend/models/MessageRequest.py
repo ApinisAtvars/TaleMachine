@@ -1,7 +1,5 @@
 from pydantic import BaseModel
-from fastapi import Form, UploadFile, File
-from typing import List, Union
-import json
+from typing import List
 
 class MessageRequest(BaseModel):
     """Represents a question request by the user to the agent."""

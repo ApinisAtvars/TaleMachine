@@ -10,7 +10,7 @@ from repositories.postgres.ChapterRepository import ChapterRepository
 from repositories.postgres.ChapterNodeMappingRepository import ChapterNodeMappingRepository
 from repositories.postgres.ImageRepository import ImageRepository
 from services.neo4j_service import Neo4jService
-from models.postgres.Chapter import ChapterBase, ChapterCreate
+from models.postgres.Chapter import ChapterBase
 from models.postgres.ChapterNodeMapping import ChapterNodeMappingBase
 
 from sqlalchemy.orm import Session
@@ -44,7 +44,7 @@ class PostgresService:
         if await self.neo4j_service.check_database_exists(sanitized_db_name):
             raise Exception(f"[ERROR] A Neo4j database with the name {new_story.neo_database_name} already exists.")
         #1. Create a new Neo4j database for the story
-        neo_database_name = await self.neo4j_service.create_new_database(new_story.title) # Database name is the initial title of the story
+        neo_database_name = await self.neo4j_service.create_new_database(sanitized_db_name) 
         #2. Set the story's neo_database_name to the new database name
         new_story.neo_database_name = neo_database_name # The database name is the sanitized final name
         #3. Insert the story in postgres, and return the created story
