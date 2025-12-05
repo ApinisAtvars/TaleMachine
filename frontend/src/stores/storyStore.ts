@@ -380,6 +380,10 @@ export const useStoryStore = defineStore('story', {
       } catch (err: any) {
         this.error = err.message
         this.streaming = false
+      } finally {
+        // this.fetchStory(this.currentStory.id) // Refresh story data
+        this.fetchImages(this.currentStory.id),
+        this.fetchChapters(this.currentStory.id)
       }
     }
   }

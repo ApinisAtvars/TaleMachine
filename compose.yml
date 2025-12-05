@@ -60,6 +60,8 @@ services:
         condition: service_healthy
       neo4j:
         condition: service_healthy
+    volumes:
+      - ./generated_images:/app/generated_images # Persist generated images, only the path is saved in PG
 
   frontend:
     build: ./frontend
