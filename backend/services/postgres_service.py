@@ -215,6 +215,13 @@ class PostgresService:
     
     #endregion
 
+    #region Cleanup
+    def close(self):
+        """Closes the database sessions."""
+        self.db_session.close()
+        self.neo4j_service.close_connection()
+    #endregion
+
 if __name__ == "__main__":
     start_db()
     service = PostgresService()

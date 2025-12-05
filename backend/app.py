@@ -17,7 +17,8 @@ async def lifespan(app: FastAPI):
     database_instance = PostgresService()
     app.state.db = database_instance
     yield
-    await database_instance.disconnect()
+    # Cleanup on shutdown
+    database_instance.close()
 
 
 app = FastAPI(lifespan=lifespan)

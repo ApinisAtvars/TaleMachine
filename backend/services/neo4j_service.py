@@ -247,7 +247,13 @@ class Neo4jService:
         query = "MATCH (n)-[r]->(m) RETURN n, labels(n), r, m, labels(m)"
 
         return self.db_graph.query(query)
-
+    
+    def close_connection(self):
+        """
+        Closes the Neo4j database connection.
+        """
+        self.db_graph.close()
+        
 if __name__ == "__main__":
     from langchain_neo4j import Neo4jGraph
     import asyncio

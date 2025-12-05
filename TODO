@@ -1,5 +1,5 @@
 - [x] EXTRA*TESTING_NEEDED The AI tries to save ALL chapters in a conversation (but you can specify that you want to save only \_this* chapter)
-- [ ] Close the database connections when shutting down - Viola
+- [x] Close the database connections when shutting down - Viola
 - [x] Chapters need to be ordered by the sort key in the frontend
 - [ ] Duplicate chapter titles can exist for the same story.
 - [ ] Make the model NOT mention the chapter IDs - but maybe it's good that it writes it down? Example: "The prologue has an ID of 5 and Chapter 1 has an ID of 4. I will write a new chapter and insert it between them." - Viola

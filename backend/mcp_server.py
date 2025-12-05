@@ -123,11 +123,14 @@ async def delete_chapter_by_id(chapter_id: int) -> bool:
 #endregion
 if __name__ == "__main__":
     print(f"Starting MCP server with transport: {transport}")
-    if transport == "stdio":
-        print("Running server with stdio transport")
-        mcp.run(transport="stdio")
-    elif transport == "streamable-http":
-        print("Running server with Streamable HTTP transport")
-        mcp.run(transport="streamable-http")
-    else:
-        raise ValueError(f"Unknown transport: {transport}")
+    try:
+        if transport == "stdio":
+            print("Running server with stdio transport")
+            mcp.run(transport="stdio")
+        elif transport == "streamable-http":
+            print("Running server with Streamable HTTP transport")
+            mcp.run(transport="streamable-http")
+        else:
+            raise ValueError(f"Unknown transport: {transport}")
+    finally:
+        pg_database_service.close()
