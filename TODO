@@ -6,10 +6,17 @@
 - [ ] Maybe LLM will get confused about the order of the messages?
 - [x] Have a NotebookLM approach to showing chapters and
 - [x] SOLVED by including `get_chapter_by_title` tool and including chapter titles as a nullable field in Messages array in the frontend. "I can save this chapter for you. However, the `save_chapter` tool requires a `previous_chapter_id` to place it correctly in the story's sequence. Since you mentioned saving it "after the prologue," I need the ID of the prologue chapter to link this new chapter correctly."
-- [x] Still an issue with Neo4j database name including "-" when creating a story that includes a "-" *This shouldn't exist no more*
+- [x] Still an issue with Neo4j database name including "-" when creating a story that includes a "-" _This shouldn't exist no more_
 - [ ] Make image chapter show up when hovering over image
 - [x] Write a better, extensive prompt for the agent - Viola
-- [ ] Write a user guide that will be shown on the home page - Viola
+- [x] Write a user guide that will be shown on the home page - Viola :
+
+```text
+To start writing, simply give the AI a quick overview of your story, including the title, genre, and key characters to set the context. You can then collaborate with the AI to draft new chapters or edit specific scenes. Since the chat acts as a temporary workspace for creativity, remember to explicitly tell the AI to save your chapter once you are satisfied. This permanently stores your progress, allowing you to pick up exactly where you left off later.
+
+As your story grows, TaleMachine helps you keep track of your world. You can visit the Graph tab to see a visual map of how your characters and locations connect, ensuring your lore stays consistent. You can also bring your narrative to life by asking the AI to generate illustrations for your scenes, which can be linked directly to your chapters or saved to your gallery.
+```
+
 - [ ] Write documentation
 - [x] Adjust compose file to include all services - Atvars
 - [ ] Add entity grouping / recognition to Neo4j (e.g. John Smith and John should be the same entity.)
