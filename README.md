@@ -6,7 +6,7 @@ TaleMachine is an AI-powered storytelling platform that enables users to create,
 
 ### Story-Driven Workflow
 
-The application is organized around **stories**. Whenever you start a new chat session with the AI, you simply specify which story you want to work on to set the context.
+The application is organized around **stories**. Whenever you start a new chat session with the AI, you simply specify which story and some details about it to set the context. Just fill a few fields like title, genre, main characters, and plot ideas to get started.
 
 ### Chapters and Saving
 
