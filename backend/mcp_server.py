@@ -1,4 +1,4 @@
-from fastmcp import FastMCP
+from fastmcp import FastMCP, Context
 from dotenv import load_dotenv
 import os
 import datetime
@@ -24,7 +24,8 @@ async def save_chapter(
     story_id: int, 
     title: str, 
     previous_chapter_id: int | None = None,
-    insert_at_start: bool = False
+    insert_at_start: bool = False,
+    summary: str | None = None
 ) -> dict: # TODO: Make it not write the chapter name in the content
     """
     Saves a new chapter to the database.
@@ -52,15 +53,19 @@ async def save_chapter(
         title: The chapter title.
         previous_chapter_id: The ID of the chapter immediately preceding this one (for squeezing in middle).
         insert_at_start: Set True ONLY if inserting before all other chapters.
+        summary: A brief summary of the chapter content for display in the chapter list (1-2 sentences).
+    
+    Returns:
+        JSON object with technical details of the created chapter. You must summarize this output to the user.
     """
     try:
-        # Calls your PostgresService logic
         created_chapter = await pg_database_service.insert_chapter_with_ordering(
             content=content,
             title=title,
             story_id=story_id,
             insert_after_chapter_id=previous_chapter_id,
-            insert_at_start=insert_at_start
+            insert_at_start=insert_at_start,
+            summary=summary
         )
         return created_chapter.model_dump()
     except Exception as e:
@@ -70,7 +75,7 @@ async def save_chapter(
 @mcp.tool()
 async def get_chapter_by_id(chapter_id: int) -> dict | None:
     """
-    Get chapter by its ID.
+    Get chapter with all details by its ID.
     """
     chapter = await pg_database_service.get_chapter_by_id(chapter_id)
     if chapter:
@@ -92,9 +97,10 @@ async def get_chapter_by_chapter_title(story_id: int, title: str) -> dict | None
 @mcp.tool()
 async def get_all_chapters_by_story_id(story_id: int) -> list[dict]:
     """
-    Get all chapters for a given story ID.
+    Get all chapters, with ids, titles, summaries, and sort orders for a given story ID.
+    To be used to list chapters without loading full content.
     """
-    chapters = await pg_database_service.get_all_chapters_by_story_id(story_id)
+    chapters = await pg_database_service.get_all_summaries_by_story_id(story_id)
     return [chapter.model_dump() for chapter in chapters]
 
 @mcp.tool()

@@ -14,5 +14,6 @@ class ChapterTable(Base): # Chapters table
     content = Column(Text, nullable=False)
     timestamp = Column(Integer, nullable=False)  # Unix timestamp
     sort_order = Column(Double, nullable=False)
+    summary = Column(Text, nullable=True)
     story_id = Column(Integer, ForeignKey('stories.id', ondelete="CASCADE"), nullable=False)  # Foreign key to stories table
     story = relationship("StoryTable")

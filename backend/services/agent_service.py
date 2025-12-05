@@ -8,7 +8,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 from langchain.agents import create_agent
-from langchain.messages import AIMessage
+from langchain.messages import AIMessage, ToolMessage
 from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_mcp_adapters.tools import load_mcp_tools
@@ -54,8 +54,9 @@ class TaleMachineAgentService:
         - Do not assume silence or vague responses imply consent to save.
 
         3. SAVING PHASE
-        - execute the `save_chapter` tool ONLY when the user gives an explicit command (e.g., "Save it", "Looks good", "Commit").
+        - Execute the `save_chapter` tool ONLY when the user gives an explicit command (e.g., "Save it", "Looks good", "Commit").
         - When saving, strip all conversational filler, markdown headers (like '## Chapter 1'), and titles from the `content` field. The `content` field must contain the story body text only.
+        - Ensure that the order of chapters is maintained as per user instructions using `previous_chapter_id` and `insert_at_start` parameters.
 
         *** ANTI-HALLUCINATION & TRUTH GUIDELINES ***
 
@@ -94,8 +95,6 @@ class TaleMachineAgentService:
                     isError=False,
                 )
 
-
-
         # Execute the tool
         result = await handler(request)
         return result
@@ -120,7 +119,9 @@ class TaleMachineAgentService:
             """
             Generate an image based on the provided description. A url to the generated image will be returned.
             """
-            # 1. Generate and save the image as a file
+            # ask the user to link the image to a chapter or just save it to the story
+            value = interrupt({"tool_name": "generate_image"})     
+            
             credentials = None
             service_account_path = os.getenv("VERTEX_SERVICE_ACCOUNT_LOCATION")
             if service_account_path and os.path.exists(service_account_path):
@@ -157,11 +158,7 @@ class TaleMachineAgentService:
                     os.makedirs("generated_images", exist_ok=True)
                     filename = f"generated_images/image_{hash(description) % 10**8}.png"
                     with open(filename, "wb") as f:
-                        f.write(img_bytes)
-                    #2. Send an interrupt before saving the image in Postgres 
-                    # (User can specify if they want to save it to a chapter or just the story)
-                    value = interrupt({
-                        "tool_name": "generate_image"})        
+                        f.write(img_bytes)   
 
                     # save image to the database (if the user doesn't want to save it to a chapter, the value passed should be -1)
                     if value == -1:
@@ -173,7 +170,8 @@ class TaleMachineAgentService:
                     # if part.text is not None:
                     #     return f"{part.text}\n\ndata:image/png;base64,{img_str}"
                     # return f"data:image/png;base64,{img_str}"
-                    return f"/generated_images/{os.path.basename(filename)}"
+                    # return f"/generated_images/{os.path.basename(filename)}"
+                    return f"Image generated! You can view it in the gallery now."
                 
             return "No image generated"
         return generate_image
@@ -286,14 +284,18 @@ class TaleMachineAgentService:
                     
                     async for chunk in stream:
                         try:
-                            print(f"\nResume chunk: {chunk}", file=sys.stderr)
+                            # print(f"\nResume chunk: {chunk}", file=sys.stderr)
                             if isinstance(chunk, tuple):
                                 stream_mode, values = chunk
                                 if stream_mode == "messages":
                                     if isinstance(values, tuple):
                                         message, metadata = values
-                                        if message.content:
+                                        if isinstance(message, AIMessage) and message.content:
                                             yield message.content
+                                        elif isinstance(message, ToolMessage):
+                                            print(f"ToolMessage received during resume: {message}", file=sys.stderr)
+                                            if message.name == "generate_image" and message.content:
+                                                yield message.content
                         except Exception as chunk_error:
                             print(f"Error processing chunk: {chunk_error}", file=sys.stderr)
                             import traceback
