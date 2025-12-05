@@ -133,7 +133,7 @@ class TaleMachineAgentService:
             Generate an image based on the provided description. A url to the generated image will be returned.
             """
             # ask the user to link the image to a chapter or just save it to the story
-            value = interrupt({"tool_name": "generate_image"})     
+            value = interrupt({"tool_name": "generate_image", "messsage": "Please provide the chapter ID to link the image to. If you don't want to link it to a chapter, please select \"Save to story\""})     
             
             credentials = None
             service_account_path = os.getenv("VERTEX_SERVICE_ACCOUNT_LOCATION")

@@ -33,8 +33,14 @@ export interface Chapter {
 
 export interface Message {
   role: 'user' | 'assistant'
-  title?: string // If the message is a chapter, it can have a title
+  title?: string // Normally, messages shouldn't have titles anymore. Only chapters do.
   content: string
+}
+
+export interface InterruptMessage {
+  tool_name: string;
+  args?: { [key: string]: any };
+  message?: string;
 }
 
 export interface CreateStoryPayload {
@@ -69,7 +75,7 @@ interface State {
   // Interrupt Handling
   interruptTriggered: boolean
   imageGenInterruptTriggered: boolean
-  interruptMessage: string // The content after "__interrupt__:"
+  interruptMessage: InterruptMessage | null // The content after "__interrupt__:"
 }
 
 // Base API URL
@@ -88,7 +94,7 @@ export const useStoryStore = defineStore('story', {
     error: null,
     interruptTriggered: false,
     imageGenInterruptTriggered: false,
-    interruptMessage: '',
+    interruptMessage: null,
     savingStory: false,
   }),
 
@@ -248,38 +254,17 @@ export const useStoryStore = defineStore('story', {
             }
             this.interruptTriggered = true;
 
-            try {
-                // 1. Parse Python-style dict using Function constructor
-                // This handles single quotes and the specific structure shown in the image
-                const parsed_interrupt_msg = (new Function("return " + interruptMsg))();
+            if (interruptMsg !== undefined) {
+              try {
 
-                // 2. Delete the empty placeholder message if no content before interrupt
-                if (this.messages[messageIndex] && this.messages[messageIndex].content.trim() === '') {
-                    this.messages.splice(messageIndex, 1);
-                }
+                  this.interruptMessage = JSON.parse(interruptMsg.trim());
 
-                if (parsed_interrupt_msg && parsed_interrupt_msg['tool_name'] === 'save_story') {
-                    // 2. Access args directly (No JSON.parse needed here)
-                    const storyArgs = parsed_interrupt_msg['args'];
-                    
-                    this.interruptMessage = `The agent needs your approval to save the story.\nDo you want to proceed?\nStory:\n${storyArgs['story_content']}`;
-                } else if (parsed_interrupt_msg && parsed_interrupt_msg['tool_name'] === 'delete_chapter_by_id') {
-                    const chapterArgs = parsed_interrupt_msg['args'];
-
-                    this.interruptMessage = `The agent needs your approval to delete chapter ID ${chapterArgs['chapter_id']}.\nDo you want to proceed?\nChapter Content:\n${chapterArgs['chapter_content']}`;
-                } else if (parsed_interrupt_msg && parsed_interrupt_msg['tool_name'] === 'generate_image') {
-                    this.imageGenInterruptTriggered = true;
-                    this.interruptMessage = "The agent has generated an image. Please, specify the chapter to save it to, or leave blank to save only to the story.";
-                } else {
-                  if (interruptMsg) {
-                    this.interruptMessage = interruptMsg.trim();
-                  } else {
-                    this.interruptMessage = "The agent has requested an interrupt, but no message was provided.";
-                  }
-                }
-            } catch (e) {
-                console.error("Failed to parse interrupt message", e);
-                this.interruptMessage = "Error parsing content.";
+              } catch (e) {
+                  console.error("Failed to parse interrupt message", e);
+                  this.interruptMessage = { tool_name: "unknown", message: `Could not parse interrupt message: ${e}`};
+              }
+            } else {
+              this.interruptMessage = { tool_name: "unknown", message: "Received undefined interrupt message."}
             }
             
             this.streaming = false;
@@ -347,7 +332,7 @@ export const useStoryStore = defineStore('story', {
       // Reset interrupt state
       this.interruptTriggered = false
       this.imageGenInterruptTriggered = false
-      this.interruptMessage = ''
+      this.interruptMessage = null
       this.streaming = true
 
       try {
