@@ -45,12 +45,17 @@ class ChapterRepository:
         return [Chapter.model_validate(obj) for obj in db_objects]
     
     @staticmethod
-    async def get_summaries_by_story_id(db: Session, story_id: int) -> list[Chapter]:
-        db_objects = db.query(ChapterTable.id, ChapterTable.title, ChapterTable.summary, ChapterTable.sort_order)\
-                        .filter(ChapterTable.story_id == story_id)\
-                        .order_by(ChapterTable.sort_order.asc())\
-                        .all()
-        return [Chapter.model_validate({"id": obj.id, "title": obj.title, "summary": obj.summary, "sort_order": obj.sort_order}) for obj in db_objects]
+    async def get_summaries_by_story_id(db: Session, story_id: int) -> list[dict]:
+        db_objects = db.query(
+            ChapterTable.id,
+            ChapterTable.title,
+            ChapterTable.sort_order,
+            ChapterTable.summary
+        ).filter(ChapterTable.story_id == story_id)\
+         .order_by(ChapterTable.sort_order.asc())\
+         .all()
+        
+        return [{"id": obj.id, "title": obj.title, "sort_order": obj.sort_order, "summary": obj.summary} for obj in db_objects]
     
     @staticmethod
     async def get_chapter_by_title(db: Session, story_id: int, title: str) -> Chapter | None:
