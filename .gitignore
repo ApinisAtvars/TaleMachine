@@ -214,3 +214,5 @@ __marimo__/
 
 # Ignore the environment files and API keys
 **service-account-key.json
+
+!frontend/src/lib
