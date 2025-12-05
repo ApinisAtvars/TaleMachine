@@ -8,6 +8,12 @@ export interface Story {
   id: number
   title: string
   neo_database_name: string
+  story_length: string
+  chapter_length: string
+  genre: string
+  additional_notes: string | null
+  main_characters: string | null
+  plot_ideas: string | null
 }
 
 export interface Image {
@@ -308,7 +314,13 @@ export const useStoryStore = defineStore('story', {
           messages: this.messages, // Sending history context
           story_name: this.currentStory.title,
           thread_id: this.threadId,
-          story_id: this.currentStory.id
+          story_id: this.currentStory.id,
+          story_length: this.currentStory.story_length,
+          chapter_length: this.currentStory.chapter_length,
+          genre: this.currentStory.genre,
+          additional_notes: this.currentStory.additional_notes,
+          main_characters: this.currentStory.main_characters,
+          plot_ideas: this.currentStory.plot_ideas
         }
 
         // Use fetch for streaming support
@@ -345,7 +357,13 @@ export const useStoryStore = defineStore('story', {
             thread_id: this.threadId,
             story_id: this.currentStory.id,
             approval: userApproval,
-            chapter_id: chapterId || -1 // Send -1 if no chapterId
+            chapter_id: chapterId || -1, // Send -1 if no chapterId
+            story_length: this.currentStory.story_length,
+            chapter_length: this.currentStory.chapter_length,
+            genre: this.currentStory.genre,
+            additional_notes: this.currentStory.additional_notes,
+            main_characters: this.currentStory.main_characters,
+            plot_ideas: this.currentStory.plot_ideas
         }
         console.log("Resume Payload:", payload)
 
