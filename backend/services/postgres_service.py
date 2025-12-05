@@ -102,7 +102,8 @@ class PostgresService:
         title: str, 
         story_id: int, 
         insert_after_chapter_id: int | None = None,
-        insert_at_start: bool = False
+        insert_at_start: bool = False,
+        summary: str | None = None,
     ):
         assert isinstance(self.db_session, Session)
         
@@ -146,7 +147,8 @@ class PostgresService:
             content=content,
             story_id=story_id,
             timestamp=timestamp,
-            sort_order=new_sort_order 
+            sort_order=new_sort_order,
+            summary=summary 
         )
 
         return await self.insert_chapter(chapter_data)
@@ -178,6 +180,14 @@ class PostgresService:
         await self.neo4j_service.connect_to_existing_database(story.neo_database_name)
 
         return await ChapterRepository.get_all_by_story_id(self.db_session, story_id)
+    
+    async def get_all_summaries_by_story_id(self, story_id: int):
+        """
+        Get all chapters' ids, titles, summaries, and sort orders for a given story ID.
+        This is useful for displaying chapter lists without loading full content.
+        """
+        assert isinstance(self.db_session, Session)
+        return await ChapterRepository.get_summaries_by_story_id(self.db_session, story_id)
     
     #endregion
 

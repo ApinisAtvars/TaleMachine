@@ -11,6 +11,7 @@ class ChapterBase(BaseModel):
     content: str
     story_id: int
     sort_order: float
+    summary: str | None = None
     timestamp: int
 
 class Chapter(ChapterBase):

@@ -95,8 +95,6 @@ class TaleMachineAgentService:
                     isError=False,
                 )
 
-
-
         # Execute the tool
         result = await handler(request)
         return result
@@ -286,7 +284,7 @@ class TaleMachineAgentService:
                     
                     async for chunk in stream:
                         try:
-                            print(f"\nResume chunk: {chunk}", file=sys.stderr)
+                            # print(f"\nResume chunk: {chunk}", file=sys.stderr)
                             if isinstance(chunk, tuple):
                                 stream_mode, values = chunk
                                 if stream_mode == "messages":
@@ -295,6 +293,7 @@ class TaleMachineAgentService:
                                         if isinstance(message, AIMessage) and message.content:
                                             yield message.content
                                         elif isinstance(message, ToolMessage):
+                                            print(f"ToolMessage received during resume: {message}", file=sys.stderr)
                                             if message.name == "generate_image" and message.content:
                                                 yield message.content
                         except Exception as chunk_error:
