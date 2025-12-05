@@ -216,7 +216,11 @@ class PostgresService:
     
     async def get_mapping_by_node_label_and_name(self, node_label: str, node_name: str):
         assert isinstance(self.db_session, Session)
-        return await ChapterNodeMappingRepository.get_by_node_label_and_name(self.db_session, node_label, node_name)
+        node_mappings = await ChapterNodeMappingRepository.get_by_node_label_and_name(self.db_session, node_label, node_name)
+        assert node_mappings is not None, f"[ERROR] No chapter-node mapping found for node ({node_label}, {node_name})"
+        chapters = [await self.get_chapter_by_id(mapping.chapter_id) for mapping in node_mappings]
+        chapters.sort(key=lambda chap: chap.sort_order)
+        return chapters
     
     #endregion
 
@@ -239,6 +243,9 @@ class PostgresService:
     #region Neo4j service
     async def get_all_nodes_and_relationships(self, database_name: str):
         return await self.neo4j_service.get_all_nodes_and_relationships(database_name)
+    
+    async def natural_language_query(self, query: str):
+        return await self.neo4j_service.query_with_natural_language(query)
     
     #endregion
 

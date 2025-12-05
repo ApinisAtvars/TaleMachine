@@ -26,12 +26,12 @@ class ChapterNodeMappingRepository:
         return [ChapterNodeMapping.model_validate(obj) for obj in db_objects]
     
     @staticmethod
-    async def get_by_node_label_and_name(db: Session, node_label: str, node_name: str) -> ChapterNodeMapping | None:
+    async def get_by_node_label_and_name(db: Session, node_label: str, node_name: str) -> list[ChapterNodeMapping] | None:
         db_object = db.query(ChapterNodeMappingTable).filter(
             ChapterNodeMappingTable.node_label == node_label,
             ChapterNodeMappingTable.node_name == node_name
-        ).first()
+        )
         if db_object:
-            return ChapterNodeMapping.model_validate(db_object)
+            return [ChapterNodeMapping.model_validate(obj) for obj in db_object]
         return None
     

@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowUpIcon } from 'lucide-vue-next'
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from '@/components/ui/input-group'
 import {
   Dialog,
   DialogContent,
@@ -30,7 +28,20 @@ import type { CreateStoryPayload } from '@/stores/storyStore'
 const router = useRouter()
 const storyStore = useStoryStore()
 
-const initialMessage = ref('')
+const fullText = "Welcome to TaleMachine!"
+const displayedText = ref("")
+
+const typeWriter = async () => {
+  for (let i = 0; i < fullText.length; i++) {
+    displayedText.value += fullText.charAt(i)
+    await new Promise(resolve => setTimeout(resolve, 50))
+  }
+}
+
+onMounted(() => {
+  typeWriter()
+})
+
 const storyName = ref('')
 const storyLength = ref<CreateStoryPayload['story_length']>('medium')
 const chapterLength = ref<CreateStoryPayload['chapter_length']>('medium')
@@ -41,12 +52,6 @@ const plotIdeas = ref('')
 
 const isDialogOpen = ref(false)
 const isCreating = ref(false)
-
-const handleInitialSend = () => {
-  if (!initialMessage.value.trim()) return
-  plotIdeas.value = initialMessage.value // Pre-fill plot ideas with the initial message
-  isDialogOpen.value = true
-}
 
 const createStoryAndStart = async () => {
   if (!storyName.value.trim()) return
@@ -83,8 +88,8 @@ const createStoryAndStart = async () => {
 
 <template>
   <div class="flex flex-col items-center justify-center min-h-[80vh] px-4">
-    <h1 class="text-4xl md:text-6xl font-bold text-center mb-8 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-      Welcome to TaleMachine!
+    <h1 class="text-4xl md:text-6xl font-bold text-center mb-8 bg-linear-to-r from-chart-3 to-chart-2 bg-clip-text text-transparent min-h-[1.5em]">
+      {{ displayedText }}
     </h1>
     
     <Button
