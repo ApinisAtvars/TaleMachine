@@ -204,6 +204,7 @@ class TaleMachineAgentService:
                     tools.append(TaleMachineAgentService.create_generate_image_tool(story_id, db_instance))
 
                     chapter_summaries = await db_instance.get_all_summaries_by_story_id(story_id)
+                    
                     agent = TaleMachineAgentService._initialize_agent(
                         tools=tools,
                         prompt=TaleMachineAgentService._prompt.format(story_name=story_name, 

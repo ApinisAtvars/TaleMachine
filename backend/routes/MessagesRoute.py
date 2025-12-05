@@ -17,7 +17,17 @@ async def send_message(message_request: MessageRequest, request: Request):
     """Send a message"""
     async def generate():
         try:
-            async for response in TaleMachineAgentService.run(message_request.messages, message_request.story_name, message_request.thread_id, message_request.story_id, request.app.state.db):
+            async for response in TaleMachineAgentService.run(message_request.messages, 
+                                                              message_request.story_name, 
+                                                              message_request.thread_id, 
+                                                              message_request.story_id, 
+                                                              request.app.state.db,
+                                                              message_request.story_length,
+                                                              message_request.chapter_length,
+                                                              message_request.genre,
+                                                              message_request.additional_notes,
+                                                              message_request.main_characters,
+                                                              message_request.plot_ideas):
                 yield response
         except Exception as e:
             yield f"Error: {str(e)}"
@@ -28,7 +38,19 @@ async def resume_after_interrupt(resume_request: ResumeMessageRequest, request: 
     """Resume after an interrupt with user approval or denial"""
     async def generate():
         try:
-            async for response in TaleMachineAgentService.resume_after_interrupt(resume_request.thread_id, resume_request.approval, resume_request.story_name, resume_request.story_id, request.app.state.db, resume_request.chapter_id):
+            async for response in TaleMachineAgentService.resume_after_interrupt(resume_request.thread_id, 
+                                                                                 resume_request.approval, 
+                                                                                 resume_request.story_name, 
+                                                                                 resume_request.story_id, 
+                                                                                 request.app.state.db,
+                                                                                 resume_request.story_length, 
+                                                                                 resume_request.chapter_length,
+                                                                                 resume_request.genre,
+                                                                                 resume_request.additional_notes,
+                                                                                 resume_request.main_characters,
+                                                                                 resume_request.plot_ideas,
+                                                                                 resume_request.chapter_id
+                                                                                 ):
                 yield response
         except Exception as e:
             yield f"Error: {str(e)}"
