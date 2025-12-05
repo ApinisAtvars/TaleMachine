@@ -25,3 +25,16 @@ class ImageRepository:
         db_objects = db.query(ImageTable).filter(ImageTable.story_id == story_id).all()
         return [ImageBase.model_validate(obj) for obj in db_objects]
     
+    @staticmethod
+    async def delete_by_id(db: Session, image_id: int) -> bool:
+        try:
+            db_object = db.query(ImageTable).filter(ImageTable.id == image_id).first()
+            if not db_object:
+                return False
+            db.delete(db_object)
+            db.commit()
+            return True
+        except Exception as e:
+            db.rollback()
+            raise Exception(f"[ERROR] Error deleting image: {e}")
+    

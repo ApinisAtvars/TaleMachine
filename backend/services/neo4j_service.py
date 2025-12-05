@@ -1,3 +1,4 @@
+import uuid
 from langchain_neo4j import GraphCypherQAChain, Neo4jGraph
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_experimental.graph_transformers import LLMGraphTransformer
@@ -6,6 +7,7 @@ from langchain_core.documents import Document
 from langchain_community.graphs.graph_document import GraphDocument, Node, Relationship
 import os
 import re
+from datetime import datetime
 
 class Neo4jService:
     def __init__(self, db_graph: Neo4jGraph):
@@ -145,29 +147,55 @@ class Neo4jService:
     def _sanitize_db_name(self, name):
         """
         Sanitizes a string to be a valid Neo4j database name.
-        Rules: 3-63 chars, start with alphanumeric, only alphanumeric/dot/dash.
-        """
-        # 1. Lowercase
-        clean_name = name.lower()
         
-        # 2. Replace invalid characters (anything not a-z, 0-9, ., -) with empty string
+        Neo4j naming rules:
+        - Length: 3-63 characters
+        - First character: ASCII alphabetic or numeric [a-z0-9]
+        - Subsequent characters: ASCII alphabetic, numeric, dots, or dashes [a-z0-9.-]
+        - Cannot end with dots or dashes
+        - Case-insensitive (normalized to lowercase)
+        - Cannot start with underscore or 'system' prefix (reserved)
+        - Names are made unique by appending a timestamp + short UUID if duplicates exist
+        """
+        # lowercase
+        clean_name = name.lower().strip()
+        
+        # invalid characters (keep only a-z, 0-9, ., -)
         clean_name = re.sub(r'[^a-z0-9.-]', '', clean_name)
         
-        # 3. Ensure it starts with an alphanumeric char. If not, prepend 'DB'
+        # leading underscores and 'system' prefix
+        while clean_name.startswith('_') or clean_name.startswith('system'):
+            if clean_name.startswith('_'):
+                clean_name = clean_name[1:]
+            if clean_name.startswith('system'):
+                clean_name = clean_name[6:]
+        
+        # starts with an alphanumeric character
         if not clean_name or not clean_name[0].isalnum():
-            clean_name = f"DB{clean_name}"
-            
-        # 4. Truncate to 63 chars max
-        clean_name = clean_name[:63]
+            clean_name = f"db{clean_name}"
         
-        # 5. Remove trailing dots or dashes (cannot end with special char)
-        clean_name = clean_name.rstrip(".-")
+        # trailing dots or dashes
+        clean_name = clean_name.rstrip('.-')
         
-        # 6. Ensure minimum length of 3 chars
+        # minimum length of 3 characters
         if len(clean_name) < 3:
             clean_name = f"{clean_name}db"
-            
-        return clean_name
+        
+        # truncate to fit uniqueness suffix (keeping room for timestamp + uuid)
+        # format: basename_YYYYMMDDHHMMSS_xxxx (max 63 chars total)
+        max_base_length = 63 - 19  # reserve 19 chars for "_YYYYMMDDHHMMSS_xxxx"
+        if len(clean_name) > max_base_length:
+            clean_name = clean_name[:max_base_length]
+        
+        # uniqueness suffix (timestamp + short UUID)
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        unique_suffix = str(uuid.uuid4())[:4]  # first 4 chars of UUID
+        final_name = f"{clean_name}{timestamp}{unique_suffix}"
+        
+        # ensure it's within 63 char limit
+        final_name = final_name[:63]
+        
+        return final_name
     
     async def delete_database(self, database_name):
         """

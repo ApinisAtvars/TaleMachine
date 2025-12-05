@@ -14,3 +14,14 @@ async def get_all_images_by_story_id(story_id: int, request: Request):
         return [image.model_dump() for image in images]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@images_router.delete("/delete/{image_id}")
+async def delete_image_by_id(image_id: int, request: Request):
+    """Delete image by its ID"""
+    try:
+        success = await request.app.state.db.delete_image_by_id(image_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Image not found")
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

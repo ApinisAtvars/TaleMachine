@@ -64,4 +64,16 @@ async def delete_story(story_id: int, request: Request):
             raise HTTPException(status_code=404, detail="Story not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@story_router.post("/rename/{story_id}")
+async def rename_story(story_id: int, new_title: str, request: Request):
+    """Rename a story by its ID"""
+    try:
+        renamed_story = await request.app.state.db.update_story_title(story_id, new_title)
+        if renamed_story:
+            return renamed_story.model_dump()
+        else:
+            raise HTTPException(status_code=404, detail="Story not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 

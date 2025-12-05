@@ -222,6 +222,10 @@ class PostgresService:
         assert isinstance(self.db_session, Session)
         return await ImageRepository.get_by_story_id(self.db_session, story_id)
     
+    async def delete_image_by_id(self, image_id: int):
+        assert isinstance(self.db_session, Session)
+        return await ImageRepository.delete_by_id(self.db_session, image_id)
+    
     #endregion
 
     #region Neo4j service
