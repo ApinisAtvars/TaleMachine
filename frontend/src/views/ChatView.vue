@@ -35,6 +35,13 @@ import {
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+
 import { useStoryStore} from '@/stores/storyStore'
 
 const props = defineProps<{
@@ -154,6 +161,7 @@ watch(
               : 'bg-muted text-foreground'
           ]"
         >
+        <!-- DEPRECATED: Messages shouldn't have titles anymore. Chapters are now in dedicated space. -->
           <div v-if="message.title" class="font-bold mb-1 text-center text-3xl">{{ message.title }}</div>
           <Separator v-if="message.title" class="my-5" />
           {{ message.content }}
@@ -231,7 +239,7 @@ watch(
     </div>
       </ResizablePanel>
 
-      <ResizableHandle v-if="isAnySidebarOpen" with-handle />
+      <ResizableHandle v-if="isAnySidebarOpen" />
 
       <ResizablePanel v-if="isAnySidebarOpen" :default-size="25" :min-size="20" :max-size="50">
         <!-- Right Card (Chapter Sidebar) -->
@@ -251,14 +259,28 @@ watch(
                   <div v-if="storyStore.currentChapters.length === 0" class="text-center text-muted-foreground py-8">
                       No chapters generated yet.
                   </div>
-                  <div v-else class="grid grid-cols-1 gap-4">
+                  <!-- <div v-else class="grid grid-cols-1 gap-4">
                       <div v-for="chapter in storyStore.currentChapters" :key="chapter.id" class="space-y-2">
                           <div class="p-4">
-                              <h3 class="font-bold text-lg mb-2">{{ chapter.title }}</h3>
+                              <h3 class="chapter-heading">{{ chapter.title }}</h3>
                               <p class="text-sm text-foreground/80">{{ chapter.content }}</p>
                           </div>
                       </div>
-                  </div>
+                  </div> -->
+                  <Accordion v-else type="single" collapsible class="w-full">
+                    <AccordionItem
+                      v-for="chapter in storyStore.currentChapters"
+                      :key="chapter.id"
+                      :value="`chapter-${chapter.id}`"
+                    > 
+                      <AccordionTrigger>
+                        <span class="chapter-heading">{{ `Chapter ${storyStore.currentChapters.indexOf(chapter)+1}: ${chapter.title}` }}</span>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <span class="chapter-text">{{ chapter.content }}</span>
+                      </AccordionContent>
+                  </AccordionItem>
+                  </Accordion>
               </ScrollArea>
             </CardContent>
         </Card>
@@ -309,11 +331,11 @@ watch(
 
     <!-- Image Preview Dialog -->
     <Dialog :open="!!selectedImage" @update:open="(val) => !val && (selectedImage = null)">
-      <DialogContent class="w-fit h-fit p-0 overflow-hidden bg-transparent border-none shadow-none flex items-center justify-center">
+      <DialogContent class="max-w-[90vw] max-h-[90vh] w-auto h-auto p-0 overflow-hidden bg-transparent border-none shadow-none flex items-center justify-center sm:max-w-[90vw]">
              <img 
               v-if="selectedImage" 
               :src="selectedImage" 
-              class="object-contain rounded-md shadow-lg"
+              class="object-contain max-w-full max-h-[90vh] rounded-md shadow-lg"
               alt="Full size preview"
             />
       </DialogContent>
@@ -377,4 +399,14 @@ watch(
 </template>
 
 <style scoped>
+.chapter-heading {
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+  text-align: center;
+  font-size: 1.5rem;
+  /* font-family: "Times New Roman", Times, serif; */
+}
+.chapter-text {
+  font-size: 1rem;
+}
 </style>
