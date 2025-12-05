@@ -1,99 +1,19 @@
-<template>
-  <div class="relative w-full h-[800px] border rounded-xl bg-slate-50 overflow-hidden shadow-sm font-sans">
-    
-    <!-- Loading / Error States -->
-    <div v-if="store.isLoading" class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
-      <div class="h-8 w-8 animate-spin rounded-full border-4 border-slate-800 border-t-transparent"></div>
-      <span class="mt-2 text-sm font-medium text-slate-600">Loading Knowledge Graph...</span>
-    </div>
-
-    <div v-if="store.error" class="absolute inset-0 z-20 flex items-center justify-center bg-white/90">
-      <div class="text-red-500 font-medium px-4 py-2 bg-red-50 rounded-lg border border-red-100">
-        {{ store.error }}
-      </div>
-    </div>
-
-    <!-- D3 Container -->
-    <div ref="containerRef" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
-
-    <!-- Details Sidebar -->
-    <transition
-      enter-active-class="transition ease-out duration-200"
-      enter-from-class="opacity-0 translate-x-10"
-      enter-to-class="opacity-100 translate-x-0"
-      leave-active-class="transition ease-in duration-150"
-      leave-from-class="opacity-100 translate-x-0"
-      leave-to-class="opacity-0 translate-x-10"
-    >
-      <div v-if="store.selectedNode || store.selectedLink" 
-           class="absolute top-4 right-4 w-80 max-h-[90%] overflow-y-auto z-10 rounded-lg border bg-white shadow-xl flex flex-col">
-        
-        <!-- Header -->
-        <div class="flex items-center justify-between p-4 border-b bg-slate-50">
-          <h3 class="font-semibold text-sm uppercase tracking-wider text-slate-700">
-            {{ store.selectedNode ? 'Node Details' : 'Relationship' }}
-          </h3>
-          <button @click="clearSelection" class="text-slate-400 hover:text-slate-700 transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-          </button>
-        </div>
-
-        <div class="p-4 space-y-4">
-          
-          <!-- Node Content -->
-          <div v-if="store.selectedNode">
-            <div class="mb-4">
-               <h2 class="text-xl font-bold text-slate-900 leading-tight">
-                 {{ store.selectedNode.properties.id }}
-               </h2>
-               <div class="flex flex-wrap gap-1 mt-2">
-                <span v-for="label in store.selectedNode.labels" :key="label"
-                      :style="{ backgroundColor: getLabelColor(label, 0.15), color: getLabelColor(label, 1.0), borderColor: getLabelColor(label, 0.3) }"
-                      class="px-2.5 py-0.5 text-xs font-bold rounded-full border">
-                  {{ label }}
-                </span>
-              </div>
-            </div>
-
-            <div v-if="store.selectedNode.properties.description" class="bg-slate-50 p-3 rounded-md border border-slate-100 text-sm text-slate-600 italic mb-4">
-              "{{ store.selectedNode.properties.description }}"
-            </div>
-
-            <div class="space-y-3">
-              <div v-for="(val, key) in filterProps(store.selectedNode.properties)" :key="key" class="text-sm group">
-                <span class="text-xs font-bold text-slate-400 uppercase block mb-0.5">{{ key }}</span>
-                <span class="text-slate-700 break-words leading-relaxed block bg-slate-50 px-2 py-1 rounded border border-slate-100">{{ val }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Link Content -->
-          <div v-if="store.selectedLink">
-             <div class="text-center py-4 bg-slate-50 rounded border border-slate-100 mb-4">
-               <span class="text-xs font-bold text-slate-400 block mb-1">TYPE</span>
-               <span class="text-lg font-mono font-bold text-slate-700">{{ store.selectedLink.type }}</span>
-             </div>
-             
-             <div class="text-xs text-slate-500 text-center">
-               Connected <br/>
-               <span class="font-semibold text-slate-700">{{ getId(store.selectedLink.source) }}</span>
-               <span class="mx-1">→</span>
-               <span class="font-semibold text-slate-700">{{ getId(store.selectedLink.target) }}</span>
-             </div>
-          </div>
-
-        </div>
-      </div>
-    </transition>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import * as d3 from 'd3'
 import { useNeo4jStore, type GraphNode, type GraphLink } from '@/stores/neo4jStore'
+import { useStoryStore } from '@/stores/storyStore'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const store = useNeo4jStore()
+const storyStore = useStoryStore()
 const containerRef = ref<HTMLElement | null>(null)
 
 // --- D3 Variables ---
@@ -105,10 +25,20 @@ let g: d3.Selection<SVGGElement, unknown, null, undefined>
 const NODE_RADIUS = 24
 const LINK_LENGTH = 180
 
+const currentStoryName = ref<string>("Select Story")
+
+async function selectStory(story: any) {
+  currentStoryName.value = story.title
+  await store.fetchGraphData(story.neo_database_name)
+}
+
 onMounted(async () => {
   if (containerRef.value) {
     initGraph()
-    await store.fetchGraphData("pristinechip")
+    await storyStore.fetchAllStories()
+    if (storyStore.stories.length > 0) {
+      selectStory(storyStore.stories[0])
+    }
   }
 })
 
@@ -122,7 +52,6 @@ watch(() => store.nodes, (newNodes) => {
 
 // --- DYNAMIC COLOR GENERATOR ---
 // This ensures that "Person" is always the same color, but we don't hardcode "Person".
-// We hash the string to a 0-360 Hue value.
 function getLabelColor(label: string, opacity: number = 1): string {
   if (!label) return `rgba(156, 163, 175, ${opacity})` // Gray fallback
 
@@ -131,9 +60,6 @@ function getLabelColor(label: string, opacity: number = 1): string {
     hash = label.charCodeAt(i) + ((hash << 5) - hash);
   }
   
-  // Use HSL for nice colors. 
-  // Modulo 360 gives us the Hue.
-  // We fix Saturation at 65% and Lightness at 45% for readable, professional colors.
   const h = Math.abs(hash % 360);
   return `hsla(${h}, 65%, 45%, ${opacity})`;
 }
@@ -206,21 +132,21 @@ function updateGraph() {
     .style('pointer-events', 'none')
 
   // Text
-  const linkText = linkLabelGroup.selectAll('text')
-    .data(d => [d])
-    .join('text')
-    .text(d => d.type)
-    .attr('text-anchor', 'middle')
-    .attr('dy', -5)
-    .style('font-size', '10px')
-    .style('font-weight', '600')
-    .style('fill', '#64748b')
-    // Halo effect for text reading over lines
-    .style('paint-order', 'stroke')
-    .style('stroke', '#f8fafc')
-    .style('stroke-width', '3px')
-    .style('stroke-linecap', 'butt')
-    .style('stroke-linejoin', 'round');
+  // const linkText = linkLabelGroup.selectAll('text')
+  //   .data(d => [d])
+  //   .join('text')
+  //   .text(d => d.type)
+  //   .attr('text-anchor', 'middle')
+  //   .attr('dy', -5)
+  //   .style('font-size', '10px')
+  //   .style('font-weight', '600')
+  //   .style('fill', '#64748b')
+  //   // Halo effect for text reading over lines
+  //   .style('paint-order', 'stroke')
+  //   .style('stroke', '#f8fafc')
+  //   .style('stroke-width', '3px')
+  //   .style('stroke-linecap', 'butt')
+  //   .style('stroke-linejoin', 'round');
 
   // 3. Nodes
   const node = g.selectAll<SVGGElement, GraphNode>('.node')
@@ -325,3 +251,111 @@ function dragEnded(event: any, d: GraphNode) {
   d.fy = null
 }
 </script>
+
+<template>
+
+  <div class="relative w-full h-[800px] border rounded-xl bg-slate-50 overflow-hidden shadow-sm font-sans">
+    
+    <!-- Story Selector -->
+    <div class="absolute top-4 left-4 z-10">
+      <DropdownMenu>
+        <DropdownMenuTrigger class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium py-2 px-4 rounded-lg shadow-sm flex items-center gap-2 transition-colors outline-none focus:ring-2 focus:ring-slate-200">
+          <span>{{ currentStoryName }}</span>
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent class="w-56 bg-white" align="start">
+          <DropdownMenuLabel>Available Stories</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem v-for="story in storyStore.stories" :key="story.id" @click="selectStory(story)">
+            {{ story.title }}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+
+    <!-- Loading / Error States -->
+    <div v-if="store.isLoading" class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+      <div class="h-8 w-8 animate-spin rounded-full border-4 border-slate-800 border-t-transparent"></div>
+      <span class="mt-2 text-sm font-medium text-slate-600">Loading Knowledge Graph...</span>
+    </div>
+
+    <div v-if="store.error" class="absolute inset-0 z-20 flex items-center justify-center bg-white/90">
+      <div class="text-red-500 font-medium px-4 py-2 bg-red-50 rounded-lg border border-red-100">
+        {{ store.error }}
+      </div>
+    </div>
+
+    <!-- D3 Container -->
+    <div ref="containerRef" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
+
+    <!-- Details Sidebar -->
+    <transition
+      enter-active-class="transition ease-out duration-200"
+      enter-from-class="opacity-0 translate-x-10"
+      enter-to-class="opacity-100 translate-x-0"
+      leave-active-class="transition ease-in duration-150"
+      leave-from-class="opacity-100 translate-x-0"
+      leave-to-class="opacity-0 translate-x-10"
+    >
+      <div v-if="store.selectedNode || store.selectedLink" 
+           class="absolute top-4 right-4 w-80 max-h-[90%] overflow-y-auto z-10 rounded-lg border bg-white shadow-xl flex flex-col">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between p-4 border-b bg-slate-50">
+          <h3 class="font-semibold text-sm uppercase tracking-wider text-slate-700">
+            {{ store.selectedNode ? 'Node Details' : 'Relationship' }}
+          </h3>
+          <button @click="clearSelection" class="text-slate-400 hover:text-slate-700 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+
+        <div class="p-4 space-y-4">
+          
+          <!-- Node Content -->
+          <div v-if="store.selectedNode">
+            <div class="mb-4">
+               <h2 class="text-xl font-bold text-slate-900 leading-tight">
+                 {{ store.selectedNode.properties.id }}
+               </h2>
+               <div class="flex flex-wrap gap-1 mt-2">
+                <span v-for="label in store.selectedNode.labels" :key="label"
+                      :style="{ backgroundColor: getLabelColor(label, 0.15), color: getLabelColor(label, 1.0), borderColor: getLabelColor(label, 0.3) }"
+                      class="px-2.5 py-0.5 text-xs font-bold rounded-full border">
+                  {{ label }}
+                </span>
+              </div>
+            </div>
+
+            <div v-if="store.selectedNode.properties.description" class="bg-slate-50 p-3 rounded-md border border-slate-100 text-sm text-slate-600 italic mb-4">
+              "{{ store.selectedNode.properties.description }}"
+            </div>
+
+            <div class="space-y-3">
+              <div v-for="(val, key) in filterProps(store.selectedNode.properties)" :key="key" class="text-sm group">
+                <span class="text-xs font-bold text-slate-400 uppercase block mb-0.5">{{ key }}</span>
+                <span class="text-slate-700 break-words leading-relaxed block bg-slate-50 px-2 py-1 rounded border border-slate-100">{{ val }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Link Content -->
+          <div v-if="store.selectedLink">
+             <div class="text-center py-4 bg-slate-50 rounded border border-slate-100 mb-4">
+               <span class="text-xs font-bold text-slate-400 block mb-1">TYPE</span>
+               <span class="text-lg font-mono font-bold text-slate-700">{{ store.selectedLink.type }}</span>
+             </div>
+             
+             <div class="text-xs text-slate-500 text-center">
+               Connected <br/>
+               <span class="font-semibold text-slate-700">{{ getId(store.selectedLink.source) }}</span>
+               <span class="mx-1">→</span>
+               <span class="font-semibold text-slate-700">{{ getId(store.selectedLink.target) }}</span>
+             </div>
+          </div>
+
+        </div>
+      </div>
+    </transition>
+  </div>
+</template>

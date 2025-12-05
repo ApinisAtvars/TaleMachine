@@ -215,7 +215,9 @@ export const useStoryStore = defineStore('story', {
           if (chunk.includes('__interrupt__:')) {
             const [cleanContent, interruptMsg] = chunk.split('__interrupt__:');
             
-            this.messages[messageIndex].content += cleanContent;
+            if (this.messages[messageIndex]) {
+              this.messages[messageIndex].content += cleanContent;
+            }
             this.interruptTriggered = true;
 
             try {
@@ -224,7 +226,7 @@ export const useStoryStore = defineStore('story', {
                 const parsed_interrupt_msg = (new Function("return " + interruptMsg))();
 
                 // 2. Delete the empty placeholder message if no content before interrupt
-                if (this.messages[messageIndex].content.trim() === '') {
+                if (this.messages[messageIndex] && this.messages[messageIndex].content.trim() === '') {
                     this.messages.splice(messageIndex, 1);
                 }
 
@@ -241,7 +243,11 @@ export const useStoryStore = defineStore('story', {
                     this.imageGenInterruptTriggered = true;
                     this.interruptMessage = "The agent has generated an image. Please, specify the chapter to save it to, or leave blank to save only to the story.";
                 } else {
+                  if (interruptMsg) {
                     this.interruptMessage = interruptMsg.trim();
+                  } else {
+                    this.interruptMessage = "The agent has requested an interrupt, but no message was provided.";
+                  }
                 }
             } catch (e) {
                 console.error("Failed to parse interrupt message", e);
@@ -252,7 +258,9 @@ export const useStoryStore = defineStore('story', {
             return; 
           }
 
-          this.messages[messageIndex].content += chunk
+          if (this.messages[messageIndex]) {
+            this.messages[messageIndex].content += chunk
+          }
         }
       }
       this.streaming = false

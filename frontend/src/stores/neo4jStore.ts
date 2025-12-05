@@ -1,15 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-// --- Types based on your JSON snippet ---
-
 // The structure of the node object inside 'n' and 'm'
 interface EntityProps {
   id: string
   [key: string]: any // allow other properties like description, role, traits
 }
 
-// The specific row format from your API
+
 export interface Neo4jRawResult {
   n: EntityProps
   "labels(n)": string[]
@@ -37,7 +35,7 @@ export interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
   source: string | GraphNode // D3 expects string ID initially
   target: string | GraphNode
   type: string
-  properties?: Record<string, any> // Your current JSON doesn't seem to return Rel properties, only type
+  properties?: Record<string, any> // The current query doesn't return relationship properties
 }
 
 export const useNeo4jStore = defineStore('neo4j', () => {
@@ -104,7 +102,7 @@ export const useNeo4jStore = defineStore('neo4j', () => {
       // 3. Process Relationship (r)
       const relType = row.r[1] 
 
-      // Create a unique ID for the link since the API doesn't provide one
+      // Create a unique ID for the link
       const linkId = `${sourceId}_${relType}_${targetId}`
 
       if (!linkMap.has(linkId)) {
