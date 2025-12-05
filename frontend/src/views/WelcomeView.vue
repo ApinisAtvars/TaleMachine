@@ -13,18 +13,38 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useStoryStore } from '@/stores/storyStore'
+import type { CreateStoryPayload } from '@/stores/storyStore'
 
 const router = useRouter()
 const storyStore = useStoryStore()
 
 const initialMessage = ref('')
 const storyName = ref('')
+const storyLength = ref<CreateStoryPayload['story_length']>('medium')
+const chapterLength = ref<CreateStoryPayload['chapter_length']>('medium')
+const genre = ref<CreateStoryPayload['genre']>('fantasy')
+const additionalNotes = ref('')
+const mainCharacters = ref('')
+const plotIdeas = ref('')
+
 const isDialogOpen = ref(false)
 const isCreating = ref(false)
 
 const handleInitialSend = () => {
   if (!initialMessage.value.trim()) return
+  plotIdeas.value = initialMessage.value // Pre-fill plot ideas with the initial message
   isDialogOpen.value = true
 }
 
@@ -32,18 +52,22 @@ const createStoryAndStart = async () => {
   if (!storyName.value.trim()) return
   
   isCreating.value = true
-  try {
-    // Generate a simple db name from title or random
-    const neoDbName = storyName.value.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now()
-    
-    const newStory = await storyStore.createStory(storyName.value, neoDbName)
+  try {    
+    const payload: CreateStoryPayload = {
+      title: storyName.value,
+      story_length: storyLength.value,
+      chapter_length: chapterLength.value,
+      genre: genre.value,
+      additional_notes: additionalNotes.value || null,
+      main_characters: mainCharacters.value || null,
+      plot_ideas: plotIdeas.value || null
+    }
+
+    const newStory = await storyStore.createStory(payload)
     
     if (newStory) {
       // Set current story
       await storyStore.fetchStory(newStory.id)
-      
-      // Send the initial message
-      await storyStore.sendMessage(initialMessage.value)
       
       // Navigate to chat
       router.push({ name: 'chat', params: { storyId: newStory.id } })
@@ -63,43 +87,120 @@ const createStoryAndStart = async () => {
       Welcome to TaleMachine!
     </h1>
     
-    <div class="w-full max-w-2xl">
-      <InputGroup>
-        <InputGroupTextarea 
-          v-model="initialMessage" 
-          placeholder="Ask, Search or Chat..." 
-          @keydown.enter.prevent="handleInitialSend"
-        />
-        <InputGroupAddon align="block-end">
-          <InputGroupButton
-            variant="default"
-            class="rounded-full"
-            size="icon-xs"
-            :disabled="!initialMessage.trim()"
-            @click="handleInitialSend"
-          >
-            <ArrowUpIcon class="size-4" />
-            <span class="sr-only">Send</span>
-          </InputGroupButton>
-        </InputGroupAddon>
-      </InputGroup>
-    </div>
+    <Button
+      variant = "default"
+      size = "lg"
+      class="mb-6 cursor-pointer"
+      @click="isDialogOpen = true"
+    >Create New Story</Button>
 
     <Dialog v-model:open="isDialogOpen">
-      <DialogContent>
+      <DialogContent class="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Name your Story</DialogTitle>
+          <DialogTitle>Create your Story</DialogTitle>
           <DialogDescription>
-            Give your new adventure a title to get started.
+            Configure the details of your new adventure.
           </DialogDescription>
         </DialogHeader>
-        <div class="py-4">
-          <Input 
-            v-model="storyName" 
-            placeholder="Enter story name..." 
-            @keydown.enter="createStoryAndStart"
-            autoFocus
-          />
+        <div class="grid gap-4 py-4">
+          <div class="grid gap-2">
+            <Label for="name">Story Title</Label>
+            <Input 
+              id="name"
+              v-model="storyName" 
+              placeholder="Enter story name..." 
+              autoFocus
+            />
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div class="grid gap-2">
+              <Label>Story Length</Label>
+              <Select v-model="storyLength">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select length" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="short">Short</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="long">Long</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div class="grid gap-2">
+              <Label>Chapter Length</Label>
+              <Select v-model="chapterLength">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select length" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="short">Short</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="long">Long</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div class="grid gap-2">
+            <Label>Genre</Label>
+            <Select v-model="genre">
+              <SelectTrigger>
+                <SelectValue placeholder="Select genre" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Fiction</SelectLabel>
+                  <SelectItem value="fantasy">Fantasy</SelectItem>
+                  <SelectItem value="sci-fi">Sci-Fi</SelectItem>
+                  <SelectItem value="mystery">Mystery</SelectItem>
+                  <SelectItem value="thriller">Thriller</SelectItem>
+                  <SelectItem value="romance">Romance</SelectItem>
+                  <SelectItem value="young_adult">Young Adult</SelectItem>
+                  <SelectItem value="children">Children</SelectItem>
+                  <SelectItem value="historical">Historical</SelectItem>
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel>Other</SelectLabel>
+                  <SelectItem value="action">Action</SelectItem>
+                  <SelectItem value="drama">Drama</SelectItem>
+                  <SelectItem value="comedy">Comedy</SelectItem>
+                  <SelectItem value="memoir">Memoir</SelectItem>
+                  <SelectItem value="poetry">Poetry</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div class="grid gap-2">
+            <Label for="plot">Plot Ideas</Label>
+            <Textarea 
+              id="plot" 
+              v-model="plotIdeas" 
+              placeholder="Describe the plot or starting scenario..." 
+              class="h-20"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <Label for="characters">Main Characters</Label>
+            <Textarea 
+              id="characters" 
+              v-model="mainCharacters" 
+              placeholder="List main characters and their traits..." 
+              class="h-20"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <Label for="notes">Additional Notes</Label>
+            <Textarea 
+              id="notes" 
+              v-model="additionalNotes" 
+              placeholder="Any other details or instructions..." 
+              class="h-20"
+            />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" @click="isDialogOpen = false">Cancel</Button>

@@ -31,6 +31,18 @@ export interface Message {
   content: string
 }
 
+export interface CreateStoryPayload {
+    title: string;
+    story_length: "short" | "medium" | "long";
+    chapter_length: "short" | "medium" | "long";
+    genre: "sci-fi" | "action" | "drama" | "comedy" | "mystery" | "thriller" | "romance" | "young_adult" | "fantasy" | "children" | "memoir" | "historical" | "poetry";
+    
+    // open fields
+    additional_notes?: string | null;
+    main_characters?: string | null;
+    plot_ideas?: string | null;
+}
+
 interface State {
   // Data
   stories: Story[]
@@ -116,10 +128,18 @@ export const useStoryStore = defineStore('story', {
     },
 
     // POST /story/insert
-    async createStory(title: string, neoDatabaseName: string) {
+    async createStory(createStoryPayload: CreateStoryPayload) {
+      // DEPRECATED: Story creation now receives special JSON data
+      // try {
+      //   // const payload = { title, neo_database_name: neoDatabaseName }
+      //   const response = await axios.post(`${API_URL}/story/insert?title=${title}&neo_database_name=${neoDatabaseName}`)
+      //   this.stories.push(response.data)
+      //   return response.data
+      // } catch (err: any) {
+      //   this.error = err.message
+      // }
       try {
-        // const payload = { title, neo_database_name: neoDatabaseName }
-        const response = await axios.post(`${API_URL}/story/insert?title=${title}&neo_database_name=${neoDatabaseName}`)
+        const response = await axios.post(`${API_URL}/story/start_form`, createStoryPayload)
         this.stories.push(response.data)
         return response.data
       } catch (err: any) {
