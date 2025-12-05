@@ -348,7 +348,11 @@ watch(
           <DialogTitle>Permission Request</DialogTitle>
           <DialogDescription>
             <ScrollArea class="h-[300px] w-full rounded-md border p-4">
-              {{ storyStore.interruptMessage || 'The AI needs your approval to proceed.' }}
+              <div v-if="storyStore.interruptMessage !== null">
+                <p><strong>Tool Name:</strong> {{ storyStore.interruptMessage.tool_name }}</p>
+                <p v-if="storyStore.interruptMessage.message"><strong>Message:</strong> {{ storyStore.interruptMessage.message }}</p>
+                <p v-if="storyStore.interruptMessage.args" v-for="(value, key) in storyStore.interruptMessage.args" :key="key"><strong>{{ key }}:</strong> {{ value }}</p>
+              </div>
             </ScrollArea>
           </DialogDescription>
         </DialogHeader>

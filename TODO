@@ -22,3 +22,10 @@ As your story grows, TaleMachine helps you keep track of your world. You can vis
 - [ ] Add entity grouping / recognition to Neo4j (e.g. John Smith and John should be the same entity.)
 - [x] Export the env variables and requirements for each service (send on Teams) - Atvars
 - [x] Create a service for frontend in docker compose - Atvars
+
+The AI is working against you, but I think this can be solved if you make it not store the "Chapter \<number\>"
+```text
+ I can save this chapter for you. However, I can't designate it as the "second chapter" if it's meant to be the third. The chapters are saved in order, and changing the order after saving might confuse the story's flow.
+
+Would you like to save this chapter as Chapter 3: Yellow, keeping the current order? Or would you like to make a different change?
+```

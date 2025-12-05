@@ -247,6 +247,8 @@ export const useStoryStore = defineStore('story', {
           
           // Check for interrupt signal as seen in Python code
           if (chunk.includes('__interrupt__:')) {
+            // Remove the placeholder message. The content after the interrrupt will be handled in the resumeAfterInterrupt action
+            this.messages.splice(messageIndex, 1)
             const [cleanContent, interruptMsg] = chunk.split('__interrupt__:');
             
             if (this.messages[messageIndex]) {
@@ -258,6 +260,10 @@ export const useStoryStore = defineStore('story', {
               try {
 
                   this.interruptMessage = JSON.parse(interruptMsg.trim());
+                  console.log("Parsed interrupt message:", this.interruptMessage);
+                  if (this.interruptMessage !== undefined && this.interruptMessage !== null && this.interruptMessage.tool_name === "generate_image") {
+                      this.imageGenInterruptTriggered = true;
+                  }
 
               } catch (e) {
                   console.error("Failed to parse interrupt message", e);

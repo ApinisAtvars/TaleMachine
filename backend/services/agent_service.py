@@ -4,6 +4,7 @@ import os
 import sys
 from langgraph.types import interrupt, Command
 from langgraph.checkpoint.memory import MemorySaver
+import json
 # import streamlit as st
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
@@ -103,11 +104,11 @@ class TaleMachineAgentService:
     ) -> CallToolResult:
         if request.name == "save_chapter" or request.name == "delete_chapter_by_id":
             
-            value = interrupt({
+            value = interrupt(json.dumps({
                 "tool_name": request.name, 
                 "args": request.args,
                 "message": "The AI is attempting to save to the database. Approve?" 
-            })
+            }))
 
             if value == "Action cancelled by user":
                 return CallToolResult(
@@ -143,46 +144,8 @@ class TaleMachineAgentService:
             Generate an image based on the provided description. A url to the generated image will be returned.
             """
             # ask the user to link the image to a chapter or just save it to the story
-            value = interrupt({"tool_name": "generate_image", "messsage": "Please provide the chapter ID to link the image to. If you don't want to link it to a chapter, please select \"Save to story\""})     
-            
-            credentials = None
-            service_account_path = os.getenv("VERTEX_SERVICE_ACCOUNT_LOCATION")
-            if service_account_path and os.path.exists(service_account_path):
-                print("[DEBUG] Path to service account exists")
-                credentials = service_account.Credentials.from_service_account_file(
-                    service_account_path,
-                    scopes=['https://www.googleapis.com/auth/cloud-platform']
-                )
-                print("[DEBUG] Loaded credentials from service account file")
-
-            client = genai.Client(
-                project=os.getenv("VERTEX_PROJECT_ID"), 
-                vertexai=True, 
-                location=os.getenv("VERTEX_PROJECT_LOCATION"),
-                credentials=credentials 
-            )
-
-            response = client.models.generate_content(
-                model="gemini-2.5-flash-image",
-                contents=[f"{description}, high resolution, detailed, realistic"],
-                config=types.GenerateContentConfig(
-                    image_config=types.ImageConfig(
-                        aspect_ratio="16:9",
-                        image_size="1K"
-                    )
-                ),
-            )
-            
-            for part in response.parts:
-                if part.inline_data is not None:
-                    img_bytes = part.inline_data.data
-                                    
-                    # Save image to file
-                    os.makedirs("generated_images", exist_ok=True)
-                    filename = f"generated_images/image_{hash(description) % 10**8}.png"
-                    with open(filename, "wb") as f:
-                        f.write(img_bytes)   
-            value = interrupt({"tool_name": "generate_image"})   
+            value = interrupt(json.dumps({"tool_name": "generate_image", "messsage": "Please provide the chapter ID to link the image to. If you don't want to link it to a chapter, please select \"Save to story\""}))    
+               
             try:
                 images = TaleMachineAgentService._image_generation_model.generate_images(
                     prompt=description,
