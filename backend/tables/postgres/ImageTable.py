@@ -4,7 +4,7 @@ from sqlalchemy import Column, Integer, String, Text, ForeignKey
 from sqlalchemy.orm import relationship
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-from backend.postgres_database import Base
+from postgres_database import Base
 
 class ImageTable(Base): # Stores the image path + the story that this image is from
     __tablename__ = 'images'

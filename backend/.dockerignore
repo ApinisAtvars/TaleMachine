@@ -1,0 +1,6 @@
+__pycache__
+generated_images
+.env
+.git
+.venv
+venv

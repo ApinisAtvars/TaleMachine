@@ -4,7 +4,7 @@ import sys
 from pydantic import BaseModel, ConfigDict, Field
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
-from backend.models.postgres.Chapter import Chapter
+from models.postgres.Chapter import Chapter
 
 class ChapterNodeMappingBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)

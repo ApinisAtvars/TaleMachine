@@ -2,16 +2,16 @@ import datetime
 import sys
 import os
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from backend.postgres_database import SessionLocal, start_db
-from backend.repositories.postgres.StoryRepository import StoryRepository
-from backend.repositories.postgres.ChapterRepository import ChapterRepository
-from backend.repositories.postgres.ChapterNodeMappingRepository import ChapterNodeMappingRepository
-from backend.repositories.postgres.ImageRepository import ImageRepository
-from backend.services.neo4j_service import Neo4jService
-from backend.models.postgres.Chapter import ChapterBase, ChapterCreate
-from backend.models.postgres.ChapterNodeMapping import ChapterNodeMappingBase
+from postgres_database import SessionLocal, start_db
+from repositories.postgres.StoryRepository import StoryRepository
+from repositories.postgres.ChapterRepository import ChapterRepository
+from repositories.postgres.ChapterNodeMappingRepository import ChapterNodeMappingRepository
+from repositories.postgres.ImageRepository import ImageRepository
+from services.neo4j_service import Neo4jService
+from models.postgres.Chapter import ChapterBase, ChapterCreate
+from models.postgres.ChapterNodeMapping import ChapterNodeMappingBase
 
 from sqlalchemy.orm import Session
 from langchain_neo4j import Neo4jGraph
@@ -21,10 +21,15 @@ class PostgresService:
     def __init__(self):
         start_db()
         self.db_session = SessionLocal()
+        
+        neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+        neo4j_user = os.getenv("NEO4J_USER", "neo4j")
+        neo4j_password = os.getenv("NEO4J_PASSWORD", "qwertyui")
+
         self.db_graph = Neo4jGraph(
-            url="bolt://localhost:7687",
-            username="neo4j",
-            password="qwertyui",
+            url=neo4j_uri,
+            username=neo4j_user,
+            password=neo4j_password,
             enhanced_schema=True
         )
         self.neo4j_service = Neo4jService(self.db_graph)
@@ -227,10 +232,10 @@ if __name__ == "__main__":
     service = PostgresService()
 
     import asyncio
-    from backend.models.postgres.Story import Story
-    from backend.models.postgres.Chapter import ChapterBase
-    from backend.models.postgres.ChapterNodeMapping import ChapterNodeMappingBase
-    from backend.models.postgres.Image import ImageBase
+    from models.postgres.Story import Story
+    from models.postgres.Chapter import ChapterBase
+    from models.postgres.ChapterNodeMapping import ChapterNodeMappingBase
+    from models.postgres.Image import ImageBase
 
     #region Tests
     async def run_tests():

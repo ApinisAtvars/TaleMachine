@@ -1,4 +1,4 @@
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 from dotenv import load_dotenv
 import os
 import datetime
@@ -124,13 +124,14 @@ async def delete_chapter_by_id(chapter_id: int) -> bool:
 if __name__ == "__main__":
     print(f"Starting MCP server with transport: {transport}")
     try:
-        if transport == "stdio":
-            print("Running server with stdio transport")
-            mcp.run(transport="stdio")
-        elif transport == "streamable-http":
-            print("Running server with Streamable HTTP transport")
-            mcp.run(transport="streamable-http")
-        else:
-            raise ValueError(f"Unknown transport: {transport}")
+        # if transport == "stdio":
+        #     print("Running server with stdio transport")
+        #     mcp.run(transport="stdio")
+        # elif transport == "streamable-http":
+        #     print("Running server with Streamable HTTP transport")
+        #     mcp.run(transport="streamable-http", host="0.0.0.0")
+        # else:
+        #     raise ValueError(f"Unknown transport: {transport}")
+        mcp.run(transport="http", host="0.0.0.0", port=8000)
     finally:
         pg_database_service.close()

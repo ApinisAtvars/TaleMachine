@@ -4,8 +4,8 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
-from backend.models.postgres.Image import ImageBase
-from backend.tables.postgres.ImageTable import ImageTable
+from models.postgres.Image import ImageBase
+from tables.postgres.ImageTable import ImageTable
 
 class ImageRepository:
     @staticmethod

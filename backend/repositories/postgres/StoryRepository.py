@@ -3,8 +3,8 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
-from backend.tables.postgres.StoryTable import StoryTable
-from backend.models.postgres.Story import Story
+from tables.postgres.StoryTable import StoryTable
+from models.postgres.Story import Story
 
 class StoryRepository:
     @staticmethod

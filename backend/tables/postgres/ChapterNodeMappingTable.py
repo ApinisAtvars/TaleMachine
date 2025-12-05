@@ -4,7 +4,7 @@ from sqlalchemy import Column, Index, Integer, String, Text, ForeignKey
 from sqlalchemy.orm import relationship
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-from backend.postgres_database import Base
+from postgres_database import Base
 
 class ChapterNodeMappingTable(Base):
     __tablename__ = 'chapter_node_mappings'

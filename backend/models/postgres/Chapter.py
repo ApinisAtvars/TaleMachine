@@ -3,7 +3,7 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
-from backend.models.postgres.Story import Story
+from models.postgres.Story import Story
 
 class ChapterBase(BaseModel):
     id: int | None = None

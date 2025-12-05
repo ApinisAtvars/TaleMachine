@@ -330,7 +330,7 @@ def test_in_terminal():
     async def setup_story():
         from postgres_service import PostgresService
         sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-        from backend.models.postgres.Story import Story
+        from models.postgres.Story import Story
         pg_database_service = PostgresService()
 
         all_stories = await pg_database_service.get_all_stories()

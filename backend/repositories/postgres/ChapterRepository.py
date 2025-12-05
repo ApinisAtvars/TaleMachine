@@ -4,9 +4,9 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
-from backend.tables.postgres.ChapterTable import ChapterTable
-from backend.models.postgres.Chapter import Chapter, ChapterBase
-from backend.tables.postgres.StoryTable import StoryTable
+from tables.postgres.ChapterTable import ChapterTable
+from models.postgres.Chapter import Chapter, ChapterBase
+from tables.postgres.StoryTable import StoryTable
 
 
 
