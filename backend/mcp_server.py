@@ -111,22 +111,6 @@ async def delete_chapter_by_id(chapter_id: int) -> bool:
     return await pg_database_service.delete_chapter_by_id(chapter_id)
 #endregion
 
-#region Neo4j Database Tools
-# Removed after conversation with Dieter. Semantic search should be a separate operation outside of the story-writing agent.
-# @mcp.tool()
-# async def semantic_search(story_id: int, user_query: str) -> str:
-#     """
-#     Query the database using natural language. Provide the story ID, and the question. You will receive the answer as a string.
-#     """
-#     # 1. Change the Neo4j database to the correct one.
-#     story = await pg_database_service.get_story_by_id(story_id)
-#     if not story:
-#         raise Exception(f"[ERROR] Story with id {story_id} does not exist.")
-#     await pg_database_service.neo4j_service.connect_to_existing_database(story.neo_database_name)
-#     # 2. Query the database with natural language
-#     answer = await pg_database_service.neo4j_service.query_with_natural_language(user_query)
-#     return answer
-#endregion
 if __name__ == "__main__":
     print(f"Starting MCP server with transport: {transport}")
     try:

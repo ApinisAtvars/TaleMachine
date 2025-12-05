@@ -293,7 +293,6 @@ class TaleMachineAgentService:
                                         if isinstance(message, AIMessage) and message.content:
                                             yield message.content
                                         elif isinstance(message, ToolMessage):
-                                            print(f"ToolMessage received during resume: {message}", file=sys.stderr)
                                             if message.name == "generate_image" and message.content:
                                                 yield message.content
                         except Exception as chunk_error:
