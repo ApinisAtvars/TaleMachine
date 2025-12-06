@@ -384,7 +384,7 @@ export const useStoryStore = defineStore('story', {
         this.error = err.message
         this.streaming = false
       } finally {
-        // this.fetchStory(this.currentStory.id) // Refresh story data
+        // this.fetchStory(this.currentStory.id) // Refresh story data, commented out because it clears the messages. This is not what we want here.
         this.fetchImages(this.currentStory.id),
         this.fetchChapters(this.currentStory.id)
       }
