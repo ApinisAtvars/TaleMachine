@@ -70,6 +70,7 @@ class TaleMachineAgentService:
         - Execute the `save_chapter` tool ONLY when the user gives an explicit command (e.g., "Save it", "Looks good", "Commit").
         - When saving, strip all conversational filler, markdown headers (like '## Chapter 1'), and titles from the `content` field. The `content` field must contain the story body text only.
         - Ensure that the **order of chapters is maintained as per user instructions** using `previous_chapter_id` and `insert_at_start` parameters.
+        - Do not enumerate chapters (e.g. If a user says 'Write Chapter 3', do not include 'Chapter 3' in the chapter title when saving it).
 
         *** ANTI-HALLUCINATION & TRUTH GUIDELINES ***
         - DATA INTEGRITY: Never invent or hallucinate success messages. If the tool is not called, the chapter is not saved.

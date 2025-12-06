@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/accordion'
 
 import { useStoryStore} from '@/stores/storyStore'
+import { useTextareaAutosize } from '@vueuse/core'
 
 const props = defineProps<{
   storyId: string
@@ -51,11 +52,14 @@ const props = defineProps<{
 
 const storyStore = useStoryStore()
 const messageInput = ref('')
+const { textarea } = useTextareaAutosize({ input: messageInput })
+const inputGroupTextareaRef = ref<any>(null)
 const messagesContainer = ref<HTMLElement | null>(null)
 const selectedChapterId = ref<number | null>(null)
 const isImageGalleryOpen = ref(false)
 const isChapterSidebarOpen = ref(false)
 const selectedImage = ref<string | null>(null)
+const isImageDeleteInterruptOpen = ref(false)
 
 const isAnySidebarOpen = computed(() => isChapterSidebarOpen.value || isImageGalleryOpen.value)
 
@@ -64,6 +68,12 @@ const selectedChapterName = computed(() => {
   const chapter = storyStore.currentChapters.find(c => c.id === selectedChapterId.value)
   return chapter ? chapter.title : 'Save to story'
 })
+
+const getChapterTitle = (chapterId: number | null) => {
+  if (chapterId === null) return 'Saved to story'
+  const chapter = storyStore.currentChapters.find(c => c.id === chapterId)
+  return chapter ? chapter.title : 'Unknown Chapter'
+}
 
 const scrollToBottom = async () => {
   await nextTick()
@@ -97,6 +107,9 @@ const handleKeydown = (e: KeyboardEvent) => {
 }
 
 onMounted(async () => {
+  if (inputGroupTextareaRef.value) {
+    textarea.value = inputGroupTextareaRef.value.$el as HTMLTextAreaElement
+  }
   const id = parseInt(props.storyId)
   if (!isNaN(id)) {
     if (!storyStore.currentStory || storyStore.currentStory.id !== id) {
@@ -189,10 +202,11 @@ watch(
       <div class="max-w-3xl mx-auto">
         <InputGroup>
           <InputGroupTextarea 
+            ref="inputGroupTextareaRef"
             v-model="messageInput"
             placeholder="Type your message..." 
             @keydown="handleKeydown"
-            class="min-h-[3rem] max-h-[10rem]"
+            class="min-h-[5rem] max-h-[10rem]"
           />
           <InputGroupAddon align="inline-end">
             <InputGroupButton
@@ -307,8 +321,9 @@ watch(
                               <img 
                                   v-if="image.link" 
                                   :src="image.link" 
-                                  class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" 
+                                  class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 cursor-pointer" 
                                   loading="lazy"
+                                  @click="selectedImage = image.link"
                               />
                               <div v-else class="flex items-center justify-center h-full text-muted-foreground">
                                   <ImageIcon class="w-8 h-8 opacity-20" />
@@ -317,9 +332,43 @@ watch(
                               <div 
                                   v-if="image.link"
                                   @click="selectedImage = image.link"
-                                  class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer"
+                                  class="absolute bottom-0 left-0 right-0 bg-black/60 transition-opacity flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer py-2"
                               >
+                                <span class="text-white font-medium text-sm px-2 text-center select-none truncate w-full">
+                                  {{ getChapterTitle(image.chapter_id) }}
+                                </span>
                               </div>
+
+                              <!-- Image delete button -->
+                              <button 
+                                @click="isImageDeleteInterruptOpen = true" 
+                                class="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                aria-label="Delete image"
+                              >
+                                <XIcon class="w-4 h-4" />
+                              </button>
+
+                              <!-- Image Delete Interrupt Dialog -->
+                              <Dialog :open="isImageDeleteInterruptOpen">
+                                <DialogContent :show-close-button="false" @pointer-down-outside.prevent @escape-key-down.prevent>
+                                  <DialogHeader>
+                                    <DialogTitle>Delete Image</DialogTitle>
+                                    <DialogDescription>
+                                      <p>Are you sure you want to delete this image? This action cannot be undone.</p>
+                                      <img 
+                                        v-if="image.link" 
+                                        :src="image.link" 
+                                        class="object-contain max-w-full max-h-60 rounded-md shadow-lg mt-4"
+                                        alt="Could not load image for deletion preview"
+                                      />
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <DialogFooter>
+                                    <Button variant="outline" @click="isImageDeleteInterruptOpen = false">Cancel</Button>
+                                    <Button @click="storyStore.deleteImage(image.id), isImageDeleteInterruptOpen = false">Delete</Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
                           </div>
                       </div>
                   </div>
@@ -406,11 +455,12 @@ watch(
 .chapter-heading {
   font-weight: bold;
   margin-bottom: 0.25rem;
-  text-align: center;
+  text-align: left;
   font-size: 1.5rem;
   /* font-family: "Times New Roman", Times, serif; */
 }
 .chapter-text {
   font-size: 1rem;
+  white-space: pre-wrap;
 }
 </style>

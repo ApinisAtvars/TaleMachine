@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch, computed } from 'vue'
 import * as d3 from 'd3'
 import { useNeo4jStore, type GraphNode, type GraphLink, type Neo4jMessage } from '@/stores/neo4jStore'
 import { useStoryStore } from '@/stores/storyStore'
@@ -14,6 +14,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+
+import { Slider } from '@/components/ui/slider'
 
 import {
   ResizableHandle,
@@ -78,8 +80,17 @@ let svg: d3.Selection<SVGSVGElement, unknown, null, undefined>
 let g: d3.Selection<SVGGElement, unknown, null, undefined>
 
 // --- Configuration ---
-const NODE_RADIUS = 24
-const LINK_LENGTH = 180
+const NODE_RADIUS = 25
+const LINK_LENGTH = ref(180)
+const linkLengthArray = computed({
+  get: () => [LINK_LENGTH.value],
+  set: (val) => {
+    const v = val?.[0]
+    if (typeof v === 'number') {
+      LINK_LENGTH.value = v
+    }
+  }
+})
 
 const currentStoryName = ref<string>("Select Story")
 
@@ -91,6 +102,18 @@ async function selectStory(story: any) {
   currentStoryName.value = story.title
   await store.fetchGraphData(story.neo_database_name)
 }
+
+const selectedLinksGroup = computed(() => {
+  if (!store.selectedLink) return []
+  const sId = getId(store.selectedLink.source)
+  const tId = getId(store.selectedLink.target)
+  
+  return store.links.filter(l => {
+    const lsId = getId(l.source)
+    const ltId = getId(l.target)
+    return (lsId === sId && ltId === tId) || (lsId === tId && ltId === sId)
+  })
+})
 
 onMounted(async () => {
   if (containerRef.value) {
@@ -106,8 +129,12 @@ onUnmounted(() => {
   if (simulation) simulation.stop()
 })
 
-watch(() => store.nodes, (newNodes) => {
-  if (newNodes.length > 0) updateGraph()
+watch(() => LINK_LENGTH.value, () => {
+  updateGraph()
+})
+
+watch(() => store.nodes, () => {
+  updateGraph()
 })
 
 watch(() => store.selectedNode, async (newNode) => {
@@ -170,7 +197,7 @@ function initGraph() {
     .attr('fill', '#94a3b8')
 
   simulation = d3.forceSimulation<GraphNode, GraphLink>()
-    .force('link', d3.forceLink<GraphNode, GraphLink>().id(d => d.id).distance(LINK_LENGTH))
+    .force('link', d3.forceLink<GraphNode, GraphLink>().id(d => d.id).distance(LINK_LENGTH.value))
     .force('charge', d3.forceManyBody().strength(-500))
     .force('collide', d3.forceCollide(NODE_RADIUS + 10))
     .force('center', d3.forceCenter(width / 2, height / 2))
@@ -179,14 +206,32 @@ function initGraph() {
 function updateGraph() {
   if (!simulation) return
 
+  // Calculate link groups for curvature
+  const linkGroups = new Map<string, GraphLink[]>();
+  store.links.forEach(l => {
+      const sId = typeof l.source === 'object' ? (l.source as GraphNode).id : l.source;
+      const tId = typeof l.target === 'object' ? (l.target as GraphNode).id : l.target;
+      const key = sId < tId ? `${sId}-${tId}` : `${tId}-${sId}`;
+      if (!linkGroups.has(key)) linkGroups.set(key, []);
+      linkGroups.get(key)!.push(l);
+  });
+  
+  linkGroups.forEach(group => {
+      group.forEach((l, i) => {
+          (l as any).linkIndex = i;
+          (l as any).totalLinks = group.length;
+      });
+  });
+
   // 1. Links
-  const link = g.selectAll<SVGLineElement, GraphLink>('.link')
+  const link = g.selectAll<SVGPathElement, GraphLink>('.link')
     .data(store.links, d => d.id)
-    .join('line')
+    .join('path')
     .attr('class', 'link')
     .attr('stroke', '#cbd5e1')
     .attr('stroke-width', 2)
     .attr('marker-end', 'url(#arrow)')
+    .attr('fill', 'none')
     .style('cursor', 'pointer')
     .on('click', (e, d) => {
       e.stopPropagation()
@@ -201,22 +246,6 @@ function updateGraph() {
     .attr('class', 'link-label-group')
     .style('pointer-events', 'none')
 
-  // Text
-  // const linkText = linkLabelGroup.selectAll('text')
-  //   .data(d => [d])
-  //   .join('text')
-  //   .text(d => d.type)
-  //   .attr('text-anchor', 'middle')
-  //   .attr('dy', -5)
-  //   .style('font-size', '10px')
-  //   .style('font-weight', '600')
-  //   .style('fill', '#64748b')
-  //   // Halo effect for text reading over lines
-  //   .style('paint-order', 'stroke')
-  //   .style('stroke', '#f8fafc')
-  //   .style('stroke-width', '3px')
-  //   .style('stroke-linecap', 'butt')
-  //   .style('stroke-linejoin', 'round');
 
   // 3. Nodes
   const node = g.selectAll<SVGGElement, GraphNode>('.node')
@@ -235,7 +264,9 @@ function updateGraph() {
     })
 
   // Node Circle
-  node.append('circle')
+  node.selectAll('circle')
+    .data(d => [d])
+    .join('circle')
     .attr('r', NODE_RADIUS)
     .attr('fill', d => {
        // Use our new dynamic function
@@ -248,7 +279,10 @@ function updateGraph() {
     .style('filter', 'drop-shadow(0 2px 4px rgb(0 0 0 / 0.1))')
 
   // Node Icon/Text
-  node.append('text')
+  node.selectAll('.node-initials')
+    .data(d => [d])
+    .join('text')
+    .attr('class', 'node-initials')
     .text(d => d.properties.id.substring(0, 2).toUpperCase())
     .attr('text-anchor', 'middle')
     .attr('dy', 4)
@@ -259,7 +293,10 @@ function updateGraph() {
     .style('text-shadow', '0px 1px 2px rgba(0,0,0,0.3)')
 
   // Label Below
-  node.append('text')
+  node.selectAll('.node-label')
+    .data(d => [d])
+    .join('text')
+    .attr('class', 'node-label')
     .text(d => d.properties.id)
     .attr('text-anchor', 'middle')
     .attr('dy', NODE_RADIUS + 14)
@@ -269,24 +306,77 @@ function updateGraph() {
     .style('text-shadow', '1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff')
 
   simulation.nodes(store.nodes).on('tick', () => {
-    link
-      .attr('x1', d => (d.source as GraphNode).x!)
-      .attr('y1', d => (d.source as GraphNode).y!)
-      .attr('x2', d => (d.target as GraphNode).x!)
-      .attr('y2', d => (d.target as GraphNode).y!)
+    link.attr('d', d => {
+        const source = d.source as GraphNode;
+        const target = d.target as GraphNode;
+        
+        const dx = target.x! - source.x!;
+        const dy = target.y! - source.y!;
+        
+        const linkIndex = (d as any).linkIndex || 0;
+        const totalLinks = (d as any).totalLinks || 1;
+
+        if (totalLinks > 1) {
+             const midX = (source.x! + target.x!) / 2;
+             const midY = (source.y! + target.y!) / 2;
+             
+             let nx = -dy;
+             let ny = dx;
+             const len = Math.sqrt(nx*nx + ny*ny) || 1;
+             nx /= len;
+             ny /= len;
+             
+             const spacing = 30; 
+             const offset = (linkIndex - (totalLinks - 1) / 2) * spacing;
+             
+             const cx = midX + nx * offset;
+             const cy = midY + ny * offset;
+             
+             return `M${source.x},${source.y}Q${cx},${cy} ${target.x},${target.y}`;
+        } else {
+             return `M${source.x},${source.y}L${target.x},${target.y}`;
+        }
+    })
 
     // Update label group position (calculated center)
     linkLabelGroup
       .attr('transform', d => {
-        const x = ((d.source as GraphNode).x! + (d.target as GraphNode).x!) / 2
-        const y = ((d.source as GraphNode).y! + (d.target as GraphNode).y!) / 2
-        return `translate(${x},${y})`
+        const source = d.source as GraphNode;
+        const target = d.target as GraphNode;
+        
+        const linkIndex = (d as any).linkIndex || 0;
+        const totalLinks = (d as any).totalLinks || 1;
+
+        if (totalLinks > 1) {
+             const dx = target.x! - source.x!;
+             const dy = target.y! - source.y!;
+             const midX = (source.x! + target.x!) / 2;
+             const midY = (source.y! + target.y!) / 2;
+             let nx = -dy;
+             let ny = dx;
+             const len = Math.sqrt(nx*nx + ny*ny) || 1;
+             nx /= len;
+             ny /= len;
+             const spacing = 30;
+             const offset = (linkIndex - (totalLinks - 1) / 2) * spacing;
+             const cx = midX + nx * offset;
+             const cy = midY + ny * offset;
+             
+             const x = (source.x! + 2*cx + target.x!) / 4;
+             const y = (source.y! + 2*cy + target.y!) / 4;
+             return `translate(${x},${y})`;
+        } else {
+             const x = (source.x! + target.x!) / 2;
+             const y = (source.y! + target.y!) / 2;
+             return `translate(${x},${y})`;
+        }
       })
 
     node.attr('transform', d => `translate(${d.x},${d.y})`)
   })
 
-  simulation.force<d3.ForceLink<GraphNode, GraphLink>>('link')!.links(store.links)
+  simulation.force('collide', d3.forceCollide(NODE_RADIUS + 10))
+  simulation.force<d3.ForceLink<GraphNode, GraphLink>>('link')!.links(store.links).distance(LINK_LENGTH.value)
   simulation.alpha(1).restart()
 }
 
@@ -355,7 +445,15 @@ function dragEnded(event: any, d: GraphNode) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <!-- Link length slider -->
+        <div class="mt-2 w-40 bg-white border border-slate-200 rounded-lg shadow-sm p-3">
+          <label class="block text-xs font-medium text-slate-600 mb-1">Link Length</label>
+          <Slider v-model="linkLengthArray" :min="50" :max="300" :step="1" />
+        </div>
+
       </div>
+
+      
 
       
 
@@ -427,16 +525,18 @@ function dragEnded(event: any, d: GraphNode) {
 
             <!-- Link Content -->
             <div v-if="store.selectedLink">
-               <div class="text-center py-4 bg-slate-50 rounded border border-slate-100 mb-4">
-                 <span class="text-xs font-bold text-slate-400 block mb-1">TYPE</span>
-                 <span class="text-lg font-mono font-bold text-slate-700">{{ store.selectedLink.type }}</span>
-               </div>
-               
-               <div class="text-xs text-slate-500 text-center">
-                 Connected <br/>
-                 <span class="font-semibold text-slate-700">{{ getId(store.selectedLink.source) }}</span>
-                 <span class="mx-1">→</span>
-                 <span class="font-semibold text-slate-700">{{ getId(store.selectedLink.target) }}</span>
+               <div v-for="(link, idx) in selectedLinksGroup" :key="link.id" class="mb-4 border-b pb-4 last:border-0 last:pb-0 last:mb-0">
+                   <div class="text-center py-2 bg-slate-50 rounded border border-slate-100 mb-2">
+                     <span class="text-xs font-bold text-slate-400 block mb-1">TYPE</span>
+                     <span class="text-lg font-mono font-bold text-slate-700">{{ link.type }}</span>
+                   </div>
+                   
+                   <div class="text-xs text-slate-500 text-center">
+                     Connected <br/>
+                     <span class="font-semibold text-slate-700">{{ getId(link.source) }}</span>
+                     <span class="mx-1">→</span>
+                     <span class="font-semibold text-slate-700">{{ getId(link.target) }}</span>
+                   </div>
                </div>
             </div>
 
@@ -453,7 +553,7 @@ function dragEnded(event: any, d: GraphNode) {
           <CardHeader class="p-3 border-b bg-slate-50/50">
             <CardTitle class="text-sm font-medium flex items-center gap-2 text-slate-700">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
-              Assistant
+              Chat with the Graph
             </CardTitle>
           </CardHeader>
           <CardContent class="flex-1 p-0 overflow-hidden relative">
@@ -508,7 +608,7 @@ function dragEnded(event: any, d: GraphNode) {
                   <span class="font-semibold text-slate-800 text-left">{{ chapter.title }}</span>
                 </AccordionTrigger>
                 <AccordionContent class="px-4 pb-4 text-slate-600">
-                  <p v-html="highlightText(chapter.content, store.selectedNode?.properties.id)"></p>
+                  <p v-html="highlightText(chapter.content, store.selectedNode?.properties.id)" class="whitespace-pre-wrap"></p>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>

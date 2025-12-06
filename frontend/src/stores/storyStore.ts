@@ -20,6 +20,7 @@ export interface Image {
   id: number
   image_path: string
   story_id: number
+  chapter_id: number | null // Nullable if image is not tied to a specific chapter
   link: string | null // URL to access the image (FASTAPI_URL/)
 }
 
@@ -203,6 +204,17 @@ export const useStoryStore = defineStore('story', {
           img.link = `http://localhost:7890/${img.image_path}`;
         }
         this.currentImages = response.data
+      } catch (err: any) {
+        this.error = err.message
+      }
+    },
+
+    async deleteImage(imageId: number) {
+      try {
+        const response = await axios.delete(`${API_URL}/images/delete/${imageId}`)
+        if (response.status === 200) {
+          this.currentImages = this.currentImages.filter(img => img.id !== imageId)
+        }
       } catch (err: any) {
         this.error = err.message
       }

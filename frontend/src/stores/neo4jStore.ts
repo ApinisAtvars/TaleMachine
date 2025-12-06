@@ -54,6 +54,7 @@ export const useNeo4jStore = defineStore('neo4j', () => {
   const isLoading = ref(false)
   const areChaptersLoading = ref(false)
   const error = ref<string | null>(null)
+
   
   const selectedNode = ref<GraphNode | null>(null)
   const selectedLink = ref<GraphLink | null>(null)
@@ -110,12 +111,15 @@ export const useNeo4jStore = defineStore('neo4j', () => {
   }
 
   async function fetchGraphData(databaseName: string) {
+    nodes.value = []
+    links.value = []
+    selectedNode.value = null
+    selectedLink.value = null
+    error.value = null
+
     if (!databaseName) return
 
     isLoading.value = true
-    error.value = null
-    selectedNode.value = null
-    selectedLink.value = null
 
     try {
       // Encode the database name to handle spaces or special chars if necessary
