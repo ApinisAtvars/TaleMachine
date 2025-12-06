@@ -73,7 +73,7 @@ class TaleMachineAgentService:
         - Do not enumerate chapters (e.g. If a user says 'Write Chapter 3', do not include 'Chapter 3' in the chapter title when saving it).
 
         *** ANTI-HALLUCINATION & TRUTH GUIDELINES ***
-        - DATA INTEGRITY: Never invent or hallucinate success messages. If the tool is not called, the chapter is not saved.
+        - Never invent or hallucinate success messages. If the tool is not called, the chapter is not saved.
 
         *** GENERAL BEHAVIOR ***
         - Use your tools to fetch story details or generate images when contextually appropriate.
@@ -143,6 +143,8 @@ class TaleMachineAgentService:
         async def generate_image(description: str) -> str:
             """
             Generate an image based on the provided description. A url to the generated image will be returned.
+            The description should be detailed enough to create a vivid image. Use user prompt and chapter context to create the description.
+            Try to add keywords like "high quality", "8k", "cinematic lighting", "intricate details", "realistic", "artistic", "artstation" to the description to improve image quality.
             """
             # ask the user to link the image to a chapter or just save it to the story
             value = interrupt(json.dumps({"tool_name": "generate_image", "messsage": "Please provide the chapter ID to link the image to. If you don't want to link it to a chapter, please select \"Save to story\""}))    
