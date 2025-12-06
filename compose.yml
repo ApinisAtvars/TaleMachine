@@ -15,7 +15,7 @@ services:
       interval: 1s
       timeout: 10s
       retries: 20
-      start_period: 3s
+      start_period: 20s
     volumes:
       - ./docker_service_data/neo4j_data:/data
 
@@ -33,7 +33,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready", "-d", "TaleMachine", "-U", "AtvarsViola"]
       interval: 10s
-      timeout: 60s
+      timeout: 120s
       retries: 5
 
   pgadmin:

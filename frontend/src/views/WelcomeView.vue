@@ -9,6 +9,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -88,10 +94,22 @@ const createStoryAndStart = async () => {
 
 <template>
   <div class="flex flex-col items-center justify-center min-h-[80vh] px-4">
-    <h1 class="text-4xl md:text-6xl font-bold text-center mb-8 bg-linear-to-r from-chart-3 to-chart-2 bg-clip-text text-transparent min-h-[1.5em]">
+    <h1 class="text-4xl md:text-6xl font-bold text-center bg-linear-to-r from-chart-3 to-chart-2 bg-clip-text text-transparent min-h-[1.5em]">
       {{ displayedText }}
     </h1>
-    
+    <Accordion type="single" collapsible class="w-full max-w-2xl mb-8">
+      <AccordionItem value="how-it-works">
+        <AccordionTrigger><span class="how-it-works-title">How it works</span></AccordionTrigger>
+        <AccordionContent>
+          <p class="whitespace-pre-wrap text-muted-foreground mb-4">
+            To start writing, simply give the AI a quick overview of your story, including the title, genre, and key characters to set the context. You can then collaborate with the AI to draft new chapters or edit specific scenes. Since the chat acts as a temporary workspace for creativity, remember to explicitly tell the AI to save your chapter once you are satisfied. This permanently stores your progress, allowing you to pick up exactly where you left off later.
+          </p>
+          <p class="whitespace-pre-wrap text-muted-foreground">
+            As your story grows, TaleMachine helps you keep track of your world. You can visit the Graph tab to see a visual map of how your characters and locations connect, ensuring your lore stays consistent. You can also bring your narrative to life by asking the AI to generate illustrations for your scenes, which can be linked directly to your chapters or saved to your gallery.
+          </p>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
     <Button
       variant = "default"
       size = "lg"
@@ -219,4 +237,8 @@ const createStoryAndStart = async () => {
 </template>
 
 <style scoped>
+.how-it-works-title {
+  font-weight: lighter;
+  font-size: 1.25rem;
+}
 </style>
