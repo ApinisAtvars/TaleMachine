@@ -39,3 +39,29 @@ The application uses Gemini models from Gemini API and Vertex AI for natural lan
 
 - `gemini-2.5-flash-image` for image generation.
 - `gemini-2.5-flash-lite` for text generation.
+
+# Test it out yourself
+
+1. Create and fill out the .env files as in the examples
+2. Create a service account key for Vertex AI, and save it in the `backend` directory as `service-account-key.json`
+3. Open the terminal, and navigate to the project root directory
+4. Run `docker compose up --build`
+    - It may be that during the first build, the backend, MCP server, and frontend services fail to run because the neo4j service reports as unhealthy. If this is the case, just run the command again.
+5. Once everything has started, you can open a browser and navigate to `http://localhost:5173` to access the application.
+
+The following steps are optional, and not needed to run the application.
+
+6. To browse the PostgreSQL database:
+    - First, navigate to `http://localhost:15433`, enter the email `atvars.apinis@student.howest.be` and password `AtvarsViola`
+    - Click on `Add New Server`
+    - Enter any name
+    - Open the Connection tab, enter the Host name/address `postgres`, username `AtvarsViola`, password `AtvarsViola`, and check the `Save password?` switch
+    - Finally, click `Save`
+    - On the sidebar, you should now see the server.
+7. To brose the Neo4j database(s):
+    - Navigate to `http://localhost:7474`, enter the password `qwertyui` and click the `Connect` button.
+    - You can now access the different databases that you have created, run Cypher queries, or just play around with the nodes :)
+    
+---
+
+> This repository was created as the final project for the course Generative AI by [Atvars Apinis](https://github.com/ApinisAtvars) and [Viola Nguyen](https://github.com/ViolettaNguyen1).
