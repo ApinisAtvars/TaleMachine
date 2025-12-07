@@ -37,7 +37,7 @@ You can generate images using prompts directly within the app. After an image is
 
 The application uses Gemini models from Gemini API and Vertex AI for natural language processing and image generation tasks.
 
-- `gemini-2.5-flash-image` for image generation.
+- `imagen-3.0-generate-001` for image generation.
 - `gemini-2.5-flash-lite` for text generation.
 
 # Test it out yourself
@@ -65,3 +65,4 @@ The following steps are optional, and not needed to run the application.
 ---
 
 > This repository was created as the final project for the course Generative AI by [Atvars Apinis](https://github.com/ApinisAtvars) and [Viola Nguyen](https://github.com/ViolettaNguyen1).
+
