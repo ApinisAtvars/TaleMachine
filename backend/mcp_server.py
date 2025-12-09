@@ -28,7 +28,7 @@ async def save_chapter(
     summary: str | None = None
 ) -> dict: # TODO: Make it not write the chapter name in the content
     """
-    Saves a new chapter to the database.
+    Saves a new chapter to the database. Use only when the user requests to save a chapter.
 
     IMPORTANT - WHAT TO PASS AS CONTENT:
     - You should save the content of one chapter only - one of your messages, NOT the entire chat history.
@@ -56,7 +56,7 @@ async def save_chapter(
         summary: A brief summary of the chapter content for display in the chapter list (1-2 sentences).
     
     Returns:
-        JSON object with technical details of the created chapter. You must summarize this output to the user.
+        JSON object with technical details of the created chapter. You must summarize this output to the user, ommiting the technical details.
     """
     try:
         created_chapter = await pg_database_service.insert_chapter_with_ordering(
