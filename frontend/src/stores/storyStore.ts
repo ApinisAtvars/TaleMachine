@@ -129,7 +129,7 @@ export const useStoryStore = defineStore('story', {
         this.currentStory = response.data
         // When selecting a story, we also fetch its related assets
         await Promise.all([
-            this.messages = [], // Clear previous messages
+            // this.messages = [], // Clear previous messages
             this.fetchImages(storyId),
             this.fetchChapters(storyId)
         ])
@@ -384,9 +384,9 @@ export const useStoryStore = defineStore('story', {
         this.error = err.message
         this.streaming = false
       } finally {
-        // this.fetchStory(this.currentStory.id) // Refresh story data, commented out because it clears the messages. This is not what we want here.
-        this.fetchImages(this.currentStory.id),
-        this.fetchChapters(this.currentStory.id)
+        this.fetchStory(this.currentStory.id) // Refresh story data, commented out because it clears the messages. This is not what we want here.
+        // this.fetchImages(this.currentStory.id),
+        // this.fetchChapters(this.currentStory.id)
       }
     }
   }
