@@ -42,7 +42,7 @@ const stories = storeToRefs(storyStore).stories;
                         :class="{
                             'bg-muted text-primary': isActive,
                         }"
-                        @click="storyStore.fetchStory(story.id)"
+                        @click="storyStore.fetchStory(story.id), storyStore.messages = []"
                     >
                         {{ story.title }}
                     </SidebarMenuButton>
