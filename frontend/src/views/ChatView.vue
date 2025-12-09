@@ -87,6 +87,8 @@ const handleSend = async () => {
   if (!content) return
 
   messageInput.value = ''
+  console.log('Sending message to story:', storyStore.currentStory?.id)
+  console.log("Story", storyStore.currentStory)
   await storyStore.sendMessage(content)
 }
 

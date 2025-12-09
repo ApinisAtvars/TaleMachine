@@ -135,6 +135,7 @@ export const useStoryStore = defineStore('story', {
         ])
       } catch (err: any) {
         this.error = err.message
+        console.log("Error fetching story:", err.message)
       } finally {
         this.loading = false
       }
@@ -154,6 +155,7 @@ export const useStoryStore = defineStore('story', {
       try {
         const response = await axios.post(`${API_URL}/story/start_form`, createStoryPayload)
         this.stories.push(response.data)
+        this.messages = []
         return response.data
       } catch (err: any) {
         this.error = err.message
