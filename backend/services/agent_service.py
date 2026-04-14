@@ -2,6 +2,7 @@ import asyncio
 import base64
 import os
 import sys
+import traceback
 from langgraph.types import interrupt, Command
 from langgraph.checkpoint.memory import MemorySaver
 import json
@@ -174,6 +175,9 @@ class TaleMachineAgentService:
                 new_image = await db_instance.insert_image(new_image)
                 return f"Image generated! You can view it in the gallery now."
             except Exception as e:
+                print(f"Error saving image: {str(e)}", file=sys.stderr)
+                traceback.print_exc()
+                print(img, file=sys.stderr)
                 return f"Error saving image: {str(e)}"
         
         return generate_image

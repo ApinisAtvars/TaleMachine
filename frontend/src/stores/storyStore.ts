@@ -355,6 +355,8 @@ export const useStoryStore = defineStore('story', {
       this.interruptMessage = null
       this.streaming = true
 
+      console.log("Resuming after interrupt. User approval:", userApproval, "Chapter ID:", chapterId)
+
       try {
         // Prepare Payload
         const payload = {

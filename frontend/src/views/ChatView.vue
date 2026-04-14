@@ -437,7 +437,7 @@ watch(
                     <DropdownMenuItem @click="selectedChapterId = null">
                         Save to story
                     </DropdownMenuItem>
-                    <DropdownMenuItem v-for="chapter in storyStore.currentChapters" :key="chapter.id" @click="selectedChapterId = chapter.id">
+                    <DropdownMenuItem v-for="chapter in storyStore.currentChapters" :key="chapter.id" @click="selectedChapterId = chapter.id, console.log('Image will be saved to chapter ID:', chapter.id)">
                         {{ chapter.title }}
                     </DropdownMenuItem>
                 </DropdownMenuContent>
