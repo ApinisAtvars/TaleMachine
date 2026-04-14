@@ -2,11 +2,17 @@
 
 TaleMachine is an AI-powered storytelling platform that enables users to create, share, and explore interactive stories. Whether you're a writer looking to craft engaging narratives or a reader seeking immersive experiences, TaleMachine offers tools and features to bring your stories to life.
 
+### User Flow
+
+<img src="https://github.com/ApinisAtvars/TaleMachine/blob/main/docs/img/user_flow.png">
+
 ## Features
 
 ### Story-Driven Workflow
 
 The application is organized around **stories**. Whenever you start a new chat session with the AI, you simply specify which story and some details about it to set the context. Just fill a few fields like title, genre, main characters, and plot ideas to get started.
+
+<img src="https://github.com/ApinisAtvars/TaleMachine/blob/main/docs/img/story_template.png">
 
 ### Chapters and Saving
 
@@ -16,14 +22,22 @@ It is important to note that _chat message history is not stored_. To keep your 
 
 It is also possible to save chapters out of order by specifying the `previous_chapter_id` when saving. This allows you to insert chapters at specific points in your story.
 
+<img src="https://github.com/ApinisAtvars/TaleMachine/blob/main/docs/img/stories_saved.png">
+
 ### Worldbuilding with Neo4j
 
 To support rich storytelling and consistent character development, the application uses Neo4j. This database tracks entities and their relationships (like characters and locations). You can also view a visual graph of these connections to better understand the structure of your story.
 To view the graph, navigate to your story and select the 'Graph' tab in the frontend.
 
+<img src="https://github.com/ApinisAtvars/TaleMachine/blob/main/docs/img/neo4j.png">
+
 ### Image Generation
 
 You can generate images using prompts directly within the app. After an image is generated, you have the option to link it to a specific chapter, though this is not required. All images are collected and viewable in the frontend gallery.
+
+<img src="https://github.com/ApinisAtvars/TaleMachine/blob/main/docs/img/image_approval.png">
+
+<img src="https://github.com/ApinisAtvars/TaleMachine/blob/main/docs/img/image_generated.png">
 
 ## Technologies Used
 
